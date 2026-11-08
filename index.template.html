@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>法官计时器 · 狼人杀</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161d27; --panel2:#1c2634; --line:#2b3747;
+  --text:#e9eef6; --muted:#8c9aad; --accent:#ffc857; --accent2:#ffb01f;
+  --good:#3ddc97; --bad:#ff6b6b; --god:#63a9ff; --wolf:#ef6b6b; --third:#b98bff; --change:#f0a35e;
+  --shadow:0 8px 28px rgba(0,0,0,.35); --radius:14px;
+}
+html[data-theme="light"]{
+  --bg:#f2f5fa; --panel:#ffffff; --panel2:#f5f8fc; --line:#dde4ee;
+  --text:#1b2430; --muted:#66748a; --accent:#c78000; --accent2:#a96a00;
+  --good:#128a5c; --bad:#d13c3c; --god:#2868c8; --wolf:#c33b3b; --third:#8754cc; --change:#b66a18;
+  --shadow:0 8px 24px rgba(30,50,80,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px 28px}
+.timerpane,.sidepane{min-width:0}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+}
+.topbar .wrap{display:flex;align-items:center;gap:10px;padding:9px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;margin-right:2px;white-space:nowrap}
+.brand .logo{
+  width:34px;height:34px;border-radius:10px;background:var(--accent);color:#1b1400;
+  display:grid;place-items:center;font-size:20px;flex:none
+}
+.brand b{display:block;font-size:15px;letter-spacing:.5px;line-height:1.15}
+.brand small{display:block;color:var(--muted);font-size:11px}
+.boardbtn{
+  display:flex;align-items:center;gap:8px;max-width:330px;min-width:150px;
+  padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+  text-align:left;transition:border-color .15s
+}
+.boardbtn:hover{border-color:var(--accent)}
+.boardbtn .bl{color:var(--muted);font-size:11px;flex:none}
+.boardbtn .bn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.boardbtn .caret{color:var(--muted);margin-left:auto;flex:none}
+.dayctl{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--panel)}
+.dayctl button{padding:3px 9px;border-radius:7px;color:var(--muted);font-size:13px}
+.dayctl button:hover{background:var(--panel2);color:var(--text)}
+.dayctl .dl{font-size:12px;padding:0 4px;color:var(--text);white-space:nowrap}
+.tools{display:flex;align-items:center;gap:4px;margin-left:auto}
+.tool{
+  width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--panel);
+  display:grid;place-items:center;font-size:15px;color:var(--muted)
+}
+.tool:hover{color:var(--text);border-color:var(--accent)}
+.tool.on{color:var(--accent);border-color:var(--accent)}
+
+/* ---------- 布局 ---------- */
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding-top:16px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0;padding:12px 14px;font-size:13px;letter-spacing:1px;color:var(--muted);
+  border-bottom:1px solid var(--line);font-weight:600;display:flex;align-items:center;gap:7px}
+.card h3 .tag{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0}
+.card .body{padding:12px 14px}
+
+/* ---------- 阶段条 ---------- */
+.stagebar{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;width:100%;max-width:100%;min-width:0}
+.stagebar button{
+  flex:none;padding:7px 13px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel);color:var(--muted);font-size:13px;white-space:nowrap
+}
+.stagebar button:hover{color:var(--text)}
+.stagebar button.active{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .stagebar button.active{color:#fff}
+
+/* ---------- 计时主卡 ---------- */
+.clockcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+  box-shadow:var(--shadow);padding:18px 18px 16px;text-align:center;position:relative;overflow:hidden;min-width:0;max-width:100%}
+.clockcard::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--accent),transparent 70%);opacity:.7}
+.clockcard.running{border-color:color-mix(in srgb,var(--good) 55%,var(--line))}
+.clockcard.timeout{border-color:var(--bad);animation:flash 1s ease-in-out 3}
+@keyframes flash{0%,100%{background:var(--panel)}50%{background:color-mix(in srgb,var(--bad) 18%,var(--panel))}}
+.clockmeta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}
+.clockmeta b{color:var(--accent);font-weight:600}
+.speaker{margin-top:6px;font-size:clamp(20px,3.4vw,28px);font-weight:700;letter-spacing:.5px}
+.speaker small{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0}
+.ringwrap{position:relative;width:min(300px,72vw);margin:6px auto 2px;aspect-ratio:1}
+.ring{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10;stroke-linecap:round}
+.ringbg{stroke:var(--panel2)}
+#ringFg{stroke:var(--accent);stroke-dasharray:628.3;stroke-dashoffset:0;transition:stroke-dashoffset .12s linear,stroke .2s}
+.clockcard.running #ringFg{stroke:var(--good)}
+.clockcard.timeout #ringFg{stroke:var(--bad)}
+.time{position:absolute;inset:0;display:grid;place-content:center;gap:0}
+#timeText{font-size:clamp(58px,13vw,104px);line-height:1;font-weight:700;letter-spacing:-2px}
+#stateText{font-size:13px;color:var(--muted);margin-top:8px;letter-spacing:2px}
+.clockcard.timeout #stateText{color:var(--bad);font-weight:700}
+.controls{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(0,1fr));gap:7px;margin-top:8px}
+.controls button{padding:11px 4px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  font-size:13px;font-weight:600;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  transition:transform .08s,border-color .15s}
+.controls button:hover{border-color:var(--accent)}
+.controls button:active{transform:translateY(1px)}
+.controls .primary{background:var(--accent);border-color:var(--accent);color:#1b1400;font-size:15px}
+html[data-theme="light"] .controls .primary{color:#fff}
+.controls .primary.paused{background:var(--good);border-color:var(--good);color:#04231a}
+.durations{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.durations input{width:66px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);text-align:center}
+.durations .chip{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);font-size:12px}
+.durations .chip:hover{border-color:var(--accent);color:var(--text)}
+.usednote{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
+
+/* ---------- 侧栏卡片 ---------- */
+.sidepane{display:grid;gap:14px}
+.frow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:5px 0;font-size:13px}
+.frow span:first-child{color:var(--muted)}
+.frow b{font-weight:600;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip2{padding:3px 8px;border-radius:7px;font-size:11.5px;border:1px solid var(--line);background:var(--panel2)}
+.chip2.f1{border-color:color-mix(in srgb,var(--god) 45%,var(--line));color:var(--god)}
+.chip2.f2{border-color:color-mix(in srgb,var(--wolf) 45%,var(--line));color:var(--wolf)}
+.chip2.f3{border-color:color-mix(in srgb,var(--third) 45%,var(--line));color:var(--third)}
+.chip2.f4{border-color:color-mix(in srgb,var(--change) 45%,var(--line));color:var(--change)}
+.boardnote{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+.seatgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.seat{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--panel2);
+  padding:8px 6px 6px;text-align:center;cursor:pointer;min-width:0;transition:border-color .15s,background .15s}
+.seat:hover{border-color:var(--accent)}
+.seat.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel2));
+  box-shadow:0 0 0 1px var(--accent) inset}
+.seat.dead{opacity:.42;filter:grayscale(.7)}
+.seat .sno{font-size:11px;color:var(--muted);line-height:1.1}
+.seat .sname{width:100%;min-width:0;border:0;background:transparent;text-align:center;font-size:12.5px;
+  font-weight:600;padding:2px 0;color:var(--text);text-overflow:ellipsis}
+.seat .sname::placeholder{color:var(--muted);font-weight:400;opacity:.7}
+.seat .sused{font-size:10.5px;color:var(--muted);min-height:14px}
+.seat .dot{position:absolute;top:5px;left:5px;width:9px;height:9px;border-radius:50%;
+  border:1px solid var(--muted);background:transparent;padding:0}
+.seat:not(.dead) .dot{background:var(--good);border-color:var(--good)}
+.seat .spoken{position:absolute;top:3px;right:5px;font-size:10px;color:var(--good)}
+.seathint{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.6}
+
+.tiplist{margin:0;padding:0;list-style:none;max-height:230px;overflow:auto}
+.tiplist li{font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line);line-height:1.6}
+.tiplist li:last-child{border-bottom:0}
+.tiplist .tk{display:inline-block;font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
+  border-radius:5px;padding:0 5px;margin-right:6px;vertical-align:1px}
+.empty{color:var(--muted);font-size:12.5px;padding:8px 0}
+
+/* ---------- 弹层 ---------- */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(4,8,14,.72);display:grid;place-items:center;padding:16px}
+.sheet{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.sheet header{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.sheet header b{font-size:15px}
+.sheet header .x{margin-left:auto;color:var(--muted);font-size:20px;padding:0 6px}
+.sheet .sbody{padding:14px 16px;overflow:auto}
+.sheet .sfoot{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.searchrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.searchrow input{flex:1;min-width:180px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel2)}
+.filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filter button{padding:5px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.filter button.on{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .filter button.on{color:#fff}
+.blist{display:grid;gap:6px}
+.bitem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.bitem:hover{border-color:var(--accent)}
+.bitem.cur{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel2))}
+.bitem .bn{font-weight:600;font-size:13.5px}
+.bitem .bs{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bitem .bmeta{margin-left:auto;flex:none;text-align:right;font-size:11px;color:var(--muted)}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow .lbl b{font-size:13.5px;display:block}
+.setrow .lbl small{color:var(--muted);font-size:11.5px}
+.setrow input[type=number]{width:88px;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);text-align:center}
+.switch{width:44px;height:25px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .15s}
+.switch.on{background:var(--good)}
+.switch.on::after{left:22px}
+.btn{padding:8px 15px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);font-size:13px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .btn.primary{color:#fff}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+
+footer{color:var(--muted);font-size:11.5px;text-align:center;padding:20px 8px 4px;line-height:1.8}
+kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--panel2)}
+
+#selftestResult{position:fixed;top:0;left:0;z-index:9999;background:#000;color:#0f0;font-size:11px;
+  padding:8px;max-width:100%;white-space:pre-wrap;margin:0}
+
+@media(max-width:980px){
+  main{grid-template-columns:minmax(0,1fr)}
+  .sidepane{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sidepane #boardInfo{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .wrap{padding-left:11px;padding-right:11px}
+  .topbar .wrap{gap:7px;padding:8px 11px}
+  .brand small{display:none}
+  .brand b{font-size:13px}
+  .boardbtn{min-width:150px;flex:1 1 150px;max-width:none;padding:6px 9px}
+  .dayctl{order:3}
+  .tools{order:4;margin-left:0}
+  .tool{width:31px;height:31px;font-size:14px}
+  main{padding-top:11px;gap:11px}
+  .sidepane{grid-template-columns:1fr}
+  .sidepane #boardInfo{grid-column:auto}
+  .clockcard{padding:14px 11px 12px}
+  .stagebar{flex-wrap:wrap;overflow-x:visible;gap:5px;padding-bottom:8px}
+  .stagebar button{flex:1 1 calc(33.333% - 5px);text-align:center;padding:7px 3px;font-size:12px}
+  .controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .controls .primary{grid-column:1/-1}
+  .seatgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ringwrap{width:min(250px,68vw)}
+  #timeText{font-size:clamp(54px,17vw,86px)}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap">
+  <div class="brand"><span class="logo">⏱</span><div><b>法官计时器</b><small>狼人杀 · 离线单文件</small></div></div>
+  <button id="boardBtn" class="boardbtn" title="选择版型"><span class="bl">版型</span><span class="bn" id="boardBtnName">—</span><span class="caret">▾</span></button>
+  <div class="dayctl">
+    <button id="dayMinus" title="上一日">−</button><span class="dl" id="dayText">第 1 天 · ☀ 白天</span><button id="dayPlus" title="下一日">＋</button>
+    <button id="partBtn" title="切换白天/夜晚">☾</button>
+  </div>
+  <div class="tools">
+    <button class="tool" id="randBtn" title="随机抽板">🎲</button>
+    <button class="tool" id="themeBtn" title="切换明暗">🌗</button>
+    <button class="tool" id="muteBtn" title="声音开关">🔊</button>
+    <button class="tool" id="fsBtn" title="全屏">⛶</button>
+    <button class="tool" id="setBtn" title="设置">⚙</button>
+  </div>
+</div></div>
+
+<div class="wrap">
+<main>
+  <section class="timerpane">
+    <div class="stagebar" id="stageBar"></div>
+    <div class="clockcard" id="clockCard">
+      <div class="clockmeta"><span id="stageLabel">—</span><span id="dayLabel">—</span></div>
+      <div class="speaker" id="speakerName">1 号<small id="speakerSub">点击右侧座位可切换发言人</small></div>
+      <div class="ringwrap">
+        <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="ringbg" cx="110" cy="110" r="100"></circle>
+          <circle id="ringFg" cx="110" cy="110" r="100"></circle>
+        </svg>
+        <div class="time"><div id="timeText" class="mono">02:00</div><div id="stateText">准备</div></div>
+      </div>
+      <div class="controls">
+        <button class="primary" id="startBtn">▶ 开始</button>
+        <button id="resetBtn">↺ 重置</button>
+        <button id="minusBtn">−10s</button>
+        <button id="plusBtn">＋10s</button>
+        <button id="prevBtn">← 上一位</button>
+        <button id="nextBtn">下一位 →</button>
+      </div>
+      <div class="durations">
+        <span>本阶段时长</span><input type="number" id="durInput" min="5" max="3600" step="5" value="120"><span>秒</span>
+        <button class="chip" data-dur="60">60</button><button class="chip" data-dur="90">90</button>
+        <button class="chip" data-dur="120">120</button><button class="chip" data-dur="180">180</button>
+      </div>
+      <div class="usednote" id="usedNote"></div>
+    </div>
+  </section>
+
+  <aside class="sidepane">
+    <section class="card" id="boardInfo"><h3>📋 当前版型<span class="tag" id="boardTag"></span></h3><div class="body" id="boardInfoBody"></div></section>
+    <section class="card" id="seatsCard"><h3>🪑 座位表<span class="tag" id="seatsTag"></span></h3><div class="body"><div class="seatgrid" id="seatGrid"></div>
+      <div class="seathint">点座位＝切换发言人；点左上角绿点＝标记出局 / 复活（「下一位」自动跳过出局者）；名字可直接输入，自动存在本机。</div></div></section>
+    <section class="card" id="tipsCard"><h3>⚖️ 法官提醒<span class="tag" id="tipsTag"></span></h3><div class="body"><ul class="tiplist" id="tipList"></ul></div></section>
+  </aside>
+</main>
+<footer>
+  快捷键：<kbd>空格</kbd> 开始/暂停 · <kbd>←</kbd><kbd>→</kbd> 切人 · <kbd>R</kbd> 重置 · <kbd>+</kbd><kbd>−</kbd> 加减 10 秒 · <kbd>F</kbd> 全屏 · <kbd>M</kbd> 静音<br>
+  数据内嵌、无后端、无联网请求；<b>单独保存本页 index.html 即可离线使用</b>。版型数据来自本地 <code>werewolf.db</code> 版型配置，规则以主持人口径为准 · <span id="genText"></span>
+</footer>
+</div>
+
+<div class="modal hidden" id="boardModal"><div class="sheet">
+  <header><b>选择版型</b><span style="color:var(--muted);font-size:12px" id="boardCountText"></span><button class="x" data-close>✕</button></header>
+  <div class="sbody">
+    <div class="searchrow"><input id="boardSearch" placeholder="搜板名 / 身份名 / 分类，例如 预女猎守、阴阳师、网易官方"></div>
+    <div class="filter" id="seatFilter"></div>
+    <div class="blist" id="boardList"></div>
+  </div>
+  <div class="sfoot"><button class="btn" data-close>关闭</button></div>
+</div></div>
+
+<div class="modal hidden" id="settingsModal"><div class="sheet">
+  <header><b>设置</b><button class="x" data-close>✕</button></header>
+  <div class="sbody" id="settingsBody"></div>
+  <div class="sfoot"><button class="btn danger" id="clearBtn">清空本局记录</button><button class="btn primary" data-close>完成</button></div>
+</div></div>
+
+<pre id="selftestResult" hidden></pre>
+
+<script>
+/*__TIMER_DATA__*/
+</script>
+<script>
+(function(){
+'use strict';
+const D = window.TIMER_DATA;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const LS = 'ww_judge_timer_v1';
+const STAGES = [
+  {k:'shangjing', n:'警上发言', d:120},
+  {k:'jingxia',   n:'警下发言', d:120},
+  {k:'fangzhu',   n:'放逐发言', d:120},
+  {k:'pk',        n:'PK 发言',  d:60},
+  {k:'yiyan',     n:'遗言',     d:60},
+  {k:'free',      n:'自由发言', d:120},
+];
+const TIP_RE = /发言|警徽|警长|退水|遗言|自爆|吞警|屠边|屠城|投票|放逐|秒|分钟|顺序|竞选|PK|白天|夜晚|平安夜|技能失效|守护|查验/;
+const RING = 2 * Math.PI * 100;
+
+function defaults(){
+  const durations = {}; STAGES.forEach(s => durations[s.k] = s.d);
+  const first = D.boards.find(b => /预女猎白/.test(b.name)) || D.boards.find(b => b.seats === 12) || D.boards[0];
+  return {boardId:first.id, stage:'jingxia', durations, seat:1, names:{}, alive:{}, spoken:{}, used:{},
+          day:1, part:'白天', theme:'dark', muted:false, vibrate:true, autoReset:true, recent:[]};
+}
+function load(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(LS) || '{}');
+    const d = defaults();
+    const s = Object.assign(d, raw);
+    s.durations = Object.assign(d.durations, raw.durations || {});
+    ['names','alive','spoken','used'].forEach(k => s[k] = Object.assign({}, raw[k] || {}));
+    if(!D.boards.some(b => b.id === s.boardId)) s.boardId = d.boardId;
+    if(!STAGES.some(x => x.k === s.stage)) s.stage = 'jingxia';
+    return s;
+  }catch(e){ return defaults(); }
+}
+const S = load();
+let remaining = S.durations[S.stage];
+let running = false, endAt = 0, timedOut = false;
+let boardFilter = {q:'', seats:0};
+let audioCtx = null;
+
+function save(){
+  try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){}
+}
+function board(){ return D.boards.find(b => b.id === S.boardId) || D.boards[0]; }
+function stage(){ return STAGES.find(s => s.k === S.stage) || STAGES[1]; }
+function duration(){ return Math.max(5, Number(S.durations[S.stage]) || 120); }
+function isAlive(n){ return S.alive[n] !== false; }
+function seatName(n){ return (S.names[n] || '').trim(); }
+function fmt(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  return (h ? h + ':' + String(m).padStart(2,'0') : String(m).padStart(2,'0')) + ':' + String(s).padStart(2,'0');
+}
+function fmtUsed(sec){
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+}
+
+/* ---------------- 计时 ---------------- */
+function renderTime(){
+  const dur = duration();
+  $('#timeText').textContent = fmt(remaining);
+  const ratio = Math.max(0, Math.min(1, remaining / dur));
+  $('#ringFg').style.strokeDashoffset = String(RING * (1 - ratio));
+  const card = $('#clockCard');
+  card.classList.toggle('running', running);
+  card.classList.toggle('timeout', timedOut);
+  $('#stateText').textContent = timedOut ? '时间到' : (running ? '计时中' : (remaining < dur ? '已暂停' : '准备'));
+  const st = stage().n, sp = S.seat + ' 号' + (seatName(S.seat) ? ' · ' + seatName(S.seat) : '');
+  document.title = timedOut ? '⏰ 时间到 · ' + sp : (running ? fmt(remaining) + ' · ' + sp : '法官计时器 · 狼人杀');
+}
+function tick(){
+  if(!running) return;
+  remaining = Math.max(0, (endAt - Date.now()) / 1000);
+  if(remaining <= 0){ remaining = 0; running = false; onTimeout(); return; }
+  renderTime();
+}
+setInterval(tick, 100);
+function start(){
+  if(timedOut) reset();
+  if(remaining <= 0) remaining = duration();
+  endAt = Date.now() + remaining * 1000;
+  running = true; timedOut = false;
+  renderTime();
+}
+function pause(){
+  if(!running) return;
+  remaining = Math.max(0, (endAt - Date.now()) / 1000);
+  running = false; renderTime();
+}
+function toggle(){ running ? pause() : start(); }
+function reset(){
+  running = false; timedOut = false; remaining = duration();
+  renderTime(); renderSeatState();
+}
+function addTime(delta){
+  remaining = Math.max(0, remaining + delta);
+  if(running) endAt += delta * 1000;
+  if(remaining > 0 && timedOut){ timedOut = false; }
+  renderTime();
+}
+function onTimeout(){
+  timedOut = true;
+  beep();
+  if(S.vibrate && navigator.vibrate) navigator.vibrate([180,90,180,90,300]);
+  renderTime();
+}
+function beep(){
+  if(S.muted) return;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!audioCtx) audioCtx = new AC();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    for(let i=0;i<3;i++){
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = i === 2 ? 660 : 880;
+      const t = audioCtx.currentTime + i * 0.32;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + 0.28);
+    }
+  }catch(e){}
+}
+function usedAdd(){
+  const spent = duration() - remaining;
+  if(spent > 0.4) S.used[S.seat] = (Number(S.used[S.seat]) || 0) + spent;
+  S.spoken[S.seat] = true;
+  save();
+}
+function selectSeat(n, resetTimer){
+  if(n < 1 || n > board().seats) return;
+  if(n !== S.seat) usedAdd();
+  S.seat = n;
+  if(resetTimer !== false && S.autoReset) reset();
+  save(); renderSeatState(); renderSpeaker(); renderTime();
+}
+function nextSeat(dir){
+  const n = board().seats;
+  let i = S.seat;
+  for(let k=0;k<n;k++){
+    i = ((i - 1 + dir + n) % n) + 1;
+    if(isAlive(i)){ selectSeat(i); return i; }
+  }
+  return S.seat;
+}
+function setStage(k){
+  if(!STAGES.some(s => s.k === k)) return;
+  usedAdd();
+  S.stage = k; remaining = duration(); running = false; timedOut = false;
+  S.spoken = {};
+  save(); renderAll();
+}
+function setDuration(v){
+  v = Math.max(5, Math.min(3600, Number(v) || 120));
+  S.durations[S.stage] = v;
+  remaining = v; running = false; timedOut = false;
+  save(); renderAll();
+}
+function applyBoard(id, keep){
+  const b = D.boards.find(x => x.id === id);
+  if(!b) return;
+  const oldSeats = board().seats;
+  S.boardId = id;
+  if(!keep || b.seats !== oldSeats){
+    ['names','alive','spoken','used'].forEach(k => {
+      const o = {};
+      Object.keys(S[k]).forEach(n => { if(Number(n) <= b.seats) o[n] = S[k][n]; });
+      S[k] = o;
+    });
+  }
+  S.seat = 1; remaining = duration(); running = false; timedOut = false;
+  S.recent = [id].concat((S.recent || []).filter(x => x !== id)).slice(0, 5);
+  save(); renderAll();
+}
+
+/* ---------------- 渲染 ---------------- */
+function renderStageBar(){
+  $('#stageBar').innerHTML = STAGES.map(s =>
+    '<button data-stage="'+s.k+'" class="'+(s.k===S.stage?'active':'')+'">'+s.n+'</button>').join('');
+}
+function renderSpeaker(){
+  const n = S.seat, nm = seatName(n);
+  $('#speakerName').innerHTML = n + ' 号' + (nm ? ' · ' + escapeHtml(nm) : '') +
+    '<small>' + stage().n + ' · 第 ' + S.day + ' 天' + S.part + '</small>';
+  $('#stageLabel').innerHTML = '阶段：<b>' + stage().n + '</b>';
+  $('#dayLabel').textContent = '第 ' + S.day + ' 天 · ' + (S.part==='白天'?'☀ 白天':'🌙 夜晚');
+  $('#dayText').textContent = '第 ' + S.day + ' 天 · ' + (S.part==='白天'?'☀ 白天':'🌙 夜晚');
+  const used = Number(S.used[n]) || 0;
+  $('#usedNote').textContent = '本局累计发言 ' + fmtUsed(used) + ' ｜ 本阶段 ' + duration() + ' 秒 ｜ ' + board().name;
+}
+function renderBoardInfo(){
+  const b = board();
+  $('#boardBtnName').textContent = b.name;
+  $('#boardTag').textContent = b.seats + ' 人 · ' + b.cards.length + ' 类身份';
+  const groups = {1:[],2:[],3:[],4:[]};
+  b.cards.forEach(c => (groups[c[1]] || (groups[c[1]] = [])).push(c));
+  const label = {1:'好人',2:'狼人',3:'第三方',4:'变动'};
+  let html = '<div class="frow"><span>座位数 / 身份牌</span><b>' + b.seats + ' 人 / ' + b.cards.reduce((s,c)=>s+c[2],0) + ' 张</b></div>' +
+             '<div class="frow"><span>分类 / 场次</span><b>' + escapeHtml(b.category || '未收录清单') + ' · ' + (b.games || 0) + ' 场</b></div>';
+  Object.keys(label).forEach(f => {
+    if(!groups[f] || !groups[f].length) return;
+    html += '<div style="margin-top:8px;font-size:12px;color:var(--muted)">' + label[f] + '阵营</div><div class="chips">' +
+      groups[f].map(c => '<span class="chip2 f'+f+'">' + escapeHtml(c[0]) + (c[2]>1?' ×'+c[2]:'') + '</span>').join('') + '</div>';
+  });
+  if(b.note) html += '<div class="boardnote">' + escapeHtml(b.note) + '</div>';
+  $('#boardInfoBody').innerHTML = html;
+  $('#genText').textContent = '版型快照 ' + D.generated + ' · ' + D.boards.length + ' 板 / ' + D.rules + ' 条规则';
+}
+function renderTips(){
+  const b = board();
+  const hits = b.rules.filter(r => TIP_RE.test(r[0] + ' ' + r[1])).slice(0, 8);
+  $('#tipsTag').textContent = b.rules.length + ' 条规则';
+  const flow = '<li><span class="tk">通用流程</span>警长竞选 → 警上发言 → 退水 → 警下发言 → '
+    + '放逐发言 → 投票 → 遗言 → 入夜；双爆吞警徽、屠边等特殊胜负与发言限制以本板规则为准。</li>';
+  $('#tipList').innerHTML = (hits.length
+    ? hits.map(r => '<li><span class="tk">' + escapeHtml(r[0]) + '</span>' + escapeHtml(r[1]) + '</li>').join('')
+    : '<li class="empty">该板暂无发言 / 警徽 / 遗言相关的特殊规则，按常规流程执行即可。</li>') + flow;
+}
+function renderSeats(){
+  const n = board().seats;
+  $('#seatsTag').textContent = n + ' 座 · ' + Object.keys(S.alive).filter(x => S.alive[x] === false).length + ' 人出局';
+  $('#seatGrid').innerHTML = Array.from({length:n}, (_,i) => {
+    const k = i + 1, nm = seatName(k), used = Number(S.used[k]) || 0;
+    return '<div class="seat" data-seat="'+k+'">' +
+      '<button class="dot" data-dot="'+k+'" title="标记出局 / 复活"></button>' +
+      (S.spoken[k] ? '<span class="spoken">✓</span>' : '') +
+      '<div class="sno">'+k+' 号</div>' +
+      '<input class="sname" data-name="'+k+'" value="'+escapeAttr(nm)+'" placeholder="玩家名" maxlength="12">' +
+      '<div class="sused">'+(used ? '累计 '+fmtUsed(used) : '—')+'</div></div>';
+  }).join('');
+  renderSeatState();
+}
+function renderSeatState(){
+  $$('.seat').forEach(el => {
+    const n = Number(el.dataset.seat);
+    el.classList.toggle('sel', n === S.seat);
+    el.classList.toggle('dead', !isAlive(n));
+  });
+}
+function renderTheme(){
+  document.documentElement.dataset.theme = S.theme;
+  const meta = document.querySelector('meta[name=theme-color]');
+  if(meta) meta.setAttribute('content', S.theme === 'light' ? '#f2f5fa' : '#0d1117');
+  $('#themeBtn').textContent = S.theme === 'light' ? '🌞' : '🌗';
+  $('#muteBtn').textContent = S.muted ? '🔇' : '🔊';
+  $('#muteBtn').classList.toggle('on', S.muted);
+}
+function renderAll(){
+  renderStageBar(); renderBoardInfo(); renderTips(); renderSeats();
+  renderSpeaker(); renderTheme(); renderTime();
+  $('#durInput').value = duration();
+}
+function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ---------------- 版型选择 ---------------- */
+function renderFilters(){
+  const sizes = [...new Set(D.boards.map(b => b.seats))].sort((a,b)=>a-b);
+  $('#seatFilter').innerHTML = [0].concat(sizes).map(s =>
+    '<button data-seats="'+s+'" class="'+(boardFilter.seats===s?'on':'')+'">'+(s?s+' 人':'全部人数')+'</button>').join('');
+}
+function renderBoardList(){
+  const q = boardFilter.q.trim().toLowerCase();
+  let list = D.boards.filter(b => {
+    if(boardFilter.seats && b.seats !== boardFilter.seats) return false;
+    if(!q) return true;
+    return (b.name + ' ' + b.category + ' ' + b.cards.map(c=>c[0]).join(' ') + ' ' + (b.note||'')).toLowerCase().includes(q);
+  });
+  const recent = (S.recent || []).map(id => D.boards.find(b => b.id === id)).filter(Boolean);
+  if(!q && !boardFilter.seats && recent.length){
+    const rset = new Set(recent.map(b => b.id));
+    list = recent.concat(list.filter(b => !rset.has(b.id)));
+  }
+  $('#boardCountText').textContent = '共 ' + list.length + ' / ' + D.boards.length + ' 个版型';
+  $('#boardList').innerHTML = list.slice(0, 200).map(b =>
+    '<button class="bitem '+(b.id===S.boardId?'cur':'')+'" data-board="'+b.id+'">' +
+      '<div style="min-width:0"><div class="bn">' + escapeHtml(b.name) + '</div>' +
+      '<div class="bs">' + b.cards.map(c => c[0] + (c[2]>1?'×'+c[2]:'')).join(' / ') + '</div></div>' +
+      '<div class="bmeta">' + b.seats + ' 人<br>' + b.rules.length + ' 条规则</div></button>').join('') ||
+    '<div class="empty">没有匹配的版型，换个关键词试试。</div>';
+}
+function openBoards(){
+  boardFilter.q = ''; $('#boardSearch').value = '';
+  renderFilters(); renderBoardList();
+  $('#boardModal').classList.remove('hidden');
+  setTimeout(() => $('#boardSearch').focus(), 30);
+}
+function closeModals(){ $$('.modal').forEach(m => m.classList.add('hidden')); }
+
+/* ---------------- 设置 ---------------- */
+function renderSettings(){
+  const rows = STAGES.map(s =>
+    '<div class="setrow"><div class="lbl"><b>'+s.n+'</b><small>该阶段默认时长（秒）</small></div>' +
+    '<input type="number" data-dur-stage="'+s.k+'" min="5" max="3600" step="5" value="'+S.durations[s.k]+'"></div>').join('');
+  const sw = (k, title, sub) => '<div class="setrow"><div class="lbl"><b>'+title+'</b><small>'+sub+'</small></div>' +
+    '<button class="switch '+(S[k]?'on':'')+'" data-switch="'+k+'"></button></div>';
+  $('#settingsBody').innerHTML = rows +
+    sw('muted','静音','到时只闪烁，不播放提示音') +
+    sw('vibrate','震动提醒','手机支持时到时震动') +
+    sw('autoReset','切换发言人自动重置','关闭后计时会连续累计') +
+    '<div class="setrow"><div class="lbl"><b>本局数据</b><small>名字、出局、已发言、累计用时保存在本机浏览器</small></div>' +
+    '<button class="btn" id="clearInline">清空</button></div>';
+  $('#settingsModal').classList.remove('hidden');
+}
+function clearGame(){
+  if(!confirm('清空本局的座位名字、出局标记和累计用时？（版型与时长设置保留）')) return;
+  S.names = {}; S.alive = {}; S.spoken = {}; S.used = {}; S.seat = 1; S.day = 1; S.part = '白天';
+  reset(); save(); renderAll();
+}
+function toggleTheme(){ S.theme = S.theme === 'light' ? 'dark' : 'light'; save(); renderTheme(); }
+function toggleMute(){ S.muted = !S.muted; save(); renderTheme(); }
+function toggleFs(){
+  if(document.fullscreenElement) document.exitFullscreen();
+  else (document.documentElement.requestFullscreen || function(){}).call(document.documentElement);
+}
+
+/* ---------------- 事件 ---------------- */
+$('#startBtn').onclick = toggle;
+$('#resetBtn').onclick = reset;
+$('#plusBtn').onclick = () => addTime(10);
+$('#minusBtn').onclick = () => addTime(-10);
+$('#prevBtn').onclick = () => nextSeat(-1);
+$('#nextBtn').onclick = () => nextSeat(1);
+$('#durInput').onchange = e => setDuration(e.target.value);
+$$('.chip[data-dur]').forEach(b => b.onclick = () => setDuration(b.dataset.dur));
+$('#stageBar').onclick = e => { const b = e.target.closest('[data-stage]'); if(b) setStage(b.dataset.stage); };
+$('#boardBtn').onclick = openBoards;
+$('#randBtn').onclick = () => applyBoard(D.boards[Math.floor(Math.random()*D.boards.length)].id);
+$('#themeBtn').onclick = toggleTheme;
+$('#muteBtn').onclick = toggleMute;
+$('#fsBtn').onclick = toggleFs;
+$('#setBtn').onclick = renderSettings;
+$('#dayMinus').onclick = () => { S.day = Math.max(1, S.day-1); save(); renderSpeaker(); };
+$('#dayPlus').onclick = () => { S.day += 1; save(); renderSpeaker(); };
+$('#partBtn').onclick = () => { S.part = S.part === '白天' ? '夜晚' : '白天'; save(); renderSpeaker(); };
+$$('[data-close]').forEach(b => b.onclick = closeModals);
+$$('.modal').forEach(m => m.onclick = e => { if(e.target === m) closeModals(); });
+$('#boardSearch').oninput = e => { boardFilter.q = e.target.value; renderBoardList(); };
+$('#seatFilter').onclick = e => {
+  const b = e.target.closest('[data-seats]'); if(!b) return;
+  boardFilter.seats = Number(b.dataset.seats); renderFilters(); renderBoardList();
+};
+$('#boardList').onclick = e => {
+  const b = e.target.closest('[data-board]'); if(!b) return;
+  applyBoard(Number(b.dataset.board)); closeModals();
+};
+$('#settingsBody').onchange = e => {
+  const t = e.target;
+  if(t.dataset.durStage){ S.durations[t.dataset.durStage] = Math.max(5, Math.min(3600, Number(t.value)||120)); save();
+    if(t.dataset.durStage === S.stage) setDuration(S.durations[S.stage]); }
+};
+$('#settingsBody').onclick = e => {
+  const b = e.target.closest('[data-switch]');
+  if(b){ const k = b.dataset.switch; S[k] = !S[k]; save(); renderSettings(); renderTheme(); return; }
+  if(e.target.closest('#clearInline')) clearGame();
+};
+$('#clearBtn').onclick = clearGame;
+$('#seatGrid').onclick = e => {
+  const dot = e.target.closest('[data-dot]');
+  if(dot){ const n = Number(dot.dataset.dot); S.alive[n] = !isAlive(n); save(); renderSeats(); return; }
+  const seat = e.target.closest('.seat');
+  if(seat && !e.target.closest('input')) selectSeat(Number(seat.dataset.seat));
+};
+$('#seatGrid').oninput = e => {
+  const t = e.target.closest('[data-name]');
+  if(t){ S.names[t.dataset.name] = t.value; save(); renderSpeaker(); }
+};
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ closeModals(); return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if(tag === 'input' || tag === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if(e.code === 'Space'){ e.preventDefault(); toggle(); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); nextSeat(1); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); nextSeat(-1); }
+  else if(k === 'r'){ reset(); }
+  else if(k === 'f'){ toggleFs(); }
+  else if(k === 'm'){ toggleMute(); }
+  else if(e.key === '+' || e.key === '='){ addTime(10); }
+  else if(e.key === '-' || e.key === '_'){ addTime(-10); }
+  else if(/^[1-9]$/.test(e.key)){ selectSeat(Number(e.key)); }
+});
+document.addEventListener('visibilitychange', () => { if(!document.hidden && running) tick(); });
+window.addEventListener('beforeunload', save);
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* ---------------- 自测 ---------------- */
+window.__T = {
+  S: () => S, D, remaining: () => remaining, running: () => running,
+  start, pause, toggle, reset, addTime, tick, selectSeat, nextSeat, setStage, setDuration,
+  applyBoard, renderAll, openBoards, closeModals, toggleTheme, toggleMute, save,
+  setAlive: (n, v) => { S.alive[n] = v; save(); renderSeats(); },
+  forceTick: ms => { if(running){ endAt -= ms; tick(); } },
+  board, duration,
+};
+function selfTest(){
+  const R = [], ck = (c, n) => R.push((c ? 'OK   ' : 'FAIL ') + n);
+  const T = window.__T, snap = JSON.stringify(S);
+  try{
+    ck(D.boards.length === 77 && D.rules === 421, '内嵌数据 77 板 / 421 规则');
+    ck(D.boards.some(b => b.name === '12人阴阳师') && D.boards.some(b => b.name === '12人火力全开'), '第二批新板已内嵌');
+    ck($$('[src],[href]').every(e => !/^https?:/i.test(e.getAttribute('src') || e.getAttribute('href') || '')), '无任何外链资源');
+    ck($$('script[src],link[rel=stylesheet]').length === 0, '无外部脚本 / 样式，单文件可独立打开');
+    ck(performance.getEntriesByType('resource').every(r => !/^https?:/i.test(r.name)), '运行时未发起任何网络请求');
+    ck($$('.stagebar button').length === 6, '六个发言阶段');
+    const b10 = D.boards.find(b => b.seats === 10), b12 = D.boards.find(b => b.seats === 12);
+    T.applyBoard(b10.id); ck($$('.seat').length === 10, '选 10 人板重建 10 个座位');
+    T.applyBoard(b12.id); ck($$('.seat').length === 12, '选 12 人板重建 12 个座位');
+    T.setStage('pk'); ck(T.remaining() === T.duration() && T.duration() === 60, 'PK 阶段时长 60 秒');
+    T.setStage('jingxia');
+    T.reset(); ck(T.remaining() === T.duration(), '重置回到阶段时长');
+    T.addTime(10); ck(T.remaining() === T.duration() + 10, '＋10 秒生效');
+    T.addTime(-10); ck(T.remaining() === T.duration(), '−10 秒生效');
+    T.start(); ck(T.running(), '开始计时');
+    T.forceTick(3000); ck(T.remaining() <= T.duration() - 2.9, '计时递减');
+    T.pause(); ck(!T.running(), '暂停停止计时');
+    const left = T.remaining(); T.forceTick(5000); ck(T.remaining() === left, '暂停后时间不再变化');
+    T.reset(); T.start(); T.forceTick(T.duration() * 1000 + 500);
+    ck(!T.running() && T.remaining() === 0, '到时自动停止并归零');
+    T.selectSeat(1); T.setAlive(2, false); T.nextSeat(1); ck(T.S().seat === 3, '下一位自动跳过出局者');
+    T.setAlive(2, true); T.nextSeat(-1); ck(T.S().seat === 2, '上一位生效');
+    T.openBoards(); ck(!$('#boardModal').classList.contains('hidden'), '版型选择弹层可打开');
+    const si = $('#boardSearch'); si.value = '阴阳师'; si.dispatchEvent(new Event('input'));
+    ck($$('#boardList .bitem').length >= 1 && $$('#boardList .bitem').length < 10, '版型搜索命中');
+    si.value = ''; si.dispatchEvent(new Event('input')); T.closeModals();
+    const th = document.documentElement.dataset.theme; T.toggleTheme();
+    ck(document.documentElement.dataset.theme !== th, '明暗主题切换'); T.toggleTheme();
+    ck(localStorage.getItem(LS) !== null, '设置持久化到 localStorage');
+    ck($('#tipList').children.length > 0, '法官提醒已渲染');
+    ck($('#boardInfoBody').textContent.includes('好人'), '版型身份构成已渲染');
+    const vw = window.innerWidth;
+    const over = [...document.querySelectorAll('body *')].filter(e => {
+      const r = e.getBoundingClientRect();
+      if(r.width <= 0 || r.right <= vw + 1) return false;
+      // 横向滚动容器内的子项本就可以滑出可视区，不算页面溢出
+      let p = e.parentElement;
+      while(p && p !== document.body){
+        if(/(auto|scroll)/.test(getComputedStyle(p).overflowX)) return false;
+        p = p.parentElement;
+      }
+      return true;
+    }).slice(0, 5).map(e => e.tagName + '.' + String(e.className || '').slice(0, 16));
+    ck(!over.length, '视口 ' + vw + 'px 内无横向越界' + (over.length ? ' → ' + over.join(' | ') : ''));
+    ck(document.documentElement.scrollWidth <= vw + 1, '文档无横向滚动');
+  }catch(e){ R.push('FAIL 自测异常：' + e.message); }
+  Object.assign(S, JSON.parse(snap)); remaining = T.duration(); running = false; timedOut = false;
+  renderAll();
+  const el = $('#selftestResult'); el.hidden = false; el.textContent = R.join('\n');
+}
+if(new URLSearchParams(location.search).has('selftest')) setTimeout(selfTest, 80);
+
+renderAll();
+})();
+</script>
+</body>
+</html>

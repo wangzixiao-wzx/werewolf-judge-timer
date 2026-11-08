@@ -1,0 +1,15 @@
+{
+  "name": "狼人杀法官计时器",
+  "short_name": "法官计时器",
+  "description": "离线可用的狼人杀发言计时器：选版型、排座位、分阶段倒计时、到时提醒",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

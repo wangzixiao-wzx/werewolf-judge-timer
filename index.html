@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>法官计时器 · 狼人杀</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161d27; --panel2:#1c2634; --line:#2b3747;
+  --text:#e9eef6; --muted:#8c9aad; --accent:#ffc857; --accent2:#ffb01f;
+  --good:#3ddc97; --bad:#ff6b6b; --god:#63a9ff; --wolf:#ef6b6b; --third:#b98bff; --change:#f0a35e;
+  --shadow:0 8px 28px rgba(0,0,0,.35); --radius:14px;
+}
+html[data-theme="light"]{
+  --bg:#f2f5fa; --panel:#ffffff; --panel2:#f5f8fc; --line:#dde4ee;
+  --text:#1b2430; --muted:#66748a; --accent:#c78000; --accent2:#a96a00;
+  --good:#128a5c; --bad:#d13c3c; --god:#2868c8; --wolf:#c33b3b; --third:#8754cc; --change:#b66a18;
+  --shadow:0 8px 24px rgba(30,50,80,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px 28px}
+.timerpane,.sidepane{min-width:0}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+}
+.topbar .wrap{display:flex;align-items:center;gap:10px;padding:9px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;margin-right:2px;white-space:nowrap}
+.brand .logo{
+  width:34px;height:34px;border-radius:10px;background:var(--accent);color:#1b1400;
+  display:grid;place-items:center;font-size:20px;flex:none
+}
+.brand b{display:block;font-size:15px;letter-spacing:.5px;line-height:1.15}
+.brand small{display:block;color:var(--muted);font-size:11px}
+.boardbtn{
+  display:flex;align-items:center;gap:8px;max-width:330px;min-width:150px;
+  padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+  text-align:left;transition:border-color .15s
+}
+.boardbtn:hover{border-color:var(--accent)}
+.boardbtn .bl{color:var(--muted);font-size:11px;flex:none}
+.boardbtn .bn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.boardbtn .caret{color:var(--muted);margin-left:auto;flex:none}
+.dayctl{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--panel)}
+.dayctl button{padding:3px 9px;border-radius:7px;color:var(--muted);font-size:13px}
+.dayctl button:hover{background:var(--panel2);color:var(--text)}
+.dayctl .dl{font-size:12px;padding:0 4px;color:var(--text);white-space:nowrap}
+.tools{display:flex;align-items:center;gap:4px;margin-left:auto}
+.tool{
+  width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--panel);
+  display:grid;place-items:center;font-size:15px;color:var(--muted)
+}
+.tool:hover{color:var(--text);border-color:var(--accent)}
+.tool.on{color:var(--accent);border-color:var(--accent)}
+
+/* ---------- 布局 ---------- */
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding-top:16px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0;padding:12px 14px;font-size:13px;letter-spacing:1px;color:var(--muted);
+  border-bottom:1px solid var(--line);font-weight:600;display:flex;align-items:center;gap:7px}
+.card h3 .tag{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0}
+.card .body{padding:12px 14px}
+
+/* ---------- 阶段条 ---------- */
+.stagebar{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;width:100%;max-width:100%;min-width:0}
+.stagebar button{
+  flex:none;padding:7px 13px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel);color:var(--muted);font-size:13px;white-space:nowrap
+}
+.stagebar button:hover{color:var(--text)}
+.stagebar button.active{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .stagebar button.active{color:#fff}
+
+/* ---------- 计时主卡 ---------- */
+.clockcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+  box-shadow:var(--shadow);padding:18px 18px 16px;text-align:center;position:relative;overflow:hidden;min-width:0;max-width:100%}
+.clockcard::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--accent),transparent 70%);opacity:.7}
+.clockcard.running{border-color:color-mix(in srgb,var(--good) 55%,var(--line))}
+.clockcard.timeout{border-color:var(--bad);animation:flash 1s ease-in-out 3}
+@keyframes flash{0%,100%{background:var(--panel)}50%{background:color-mix(in srgb,var(--bad) 18%,var(--panel))}}
+.clockmeta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}
+.clockmeta b{color:var(--accent);font-weight:600}
+.speaker{margin-top:6px;font-size:clamp(20px,3.4vw,28px);font-weight:700;letter-spacing:.5px}
+.speaker small{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0}
+.ringwrap{position:relative;width:min(300px,72vw);margin:6px auto 2px;aspect-ratio:1}
+.ring{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10;stroke-linecap:round}
+.ringbg{stroke:var(--panel2)}
+#ringFg{stroke:var(--accent);stroke-dasharray:628.3;stroke-dashoffset:0;transition:stroke-dashoffset .12s linear,stroke .2s}
+.clockcard.running #ringFg{stroke:var(--good)}
+.clockcard.timeout #ringFg{stroke:var(--bad)}
+.time{position:absolute;inset:0;display:grid;place-content:center;gap:0}
+#timeText{font-size:clamp(58px,13vw,104px);line-height:1;font-weight:700;letter-spacing:-2px}
+#stateText{font-size:13px;color:var(--muted);margin-top:8px;letter-spacing:2px}
+.clockcard.timeout #stateText{color:var(--bad);font-weight:700}
+.controls{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(0,1fr));gap:7px;margin-top:8px}
+.controls button{padding:11px 4px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  font-size:13px;font-weight:600;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  transition:transform .08s,border-color .15s}
+.controls button:hover{border-color:var(--accent)}
+.controls button:active{transform:translateY(1px)}
+.controls .primary{background:var(--accent);border-color:var(--accent);color:#1b1400;font-size:15px}
+html[data-theme="light"] .controls .primary{color:#fff}
+.controls .primary.paused{background:var(--good);border-color:var(--good);color:#04231a}
+.durations{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.durations input{width:66px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);text-align:center}
+.durations .chip{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);font-size:12px}
+.durations .chip:hover{border-color:var(--accent);color:var(--text)}
+.usednote{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
+
+/* ---------- 侧栏卡片 ---------- */
+.sidepane{display:grid;gap:14px}
+.frow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:5px 0;font-size:13px}
+.frow span:first-child{color:var(--muted)}
+.frow b{font-weight:600;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip2{padding:3px 8px;border-radius:7px;font-size:11.5px;border:1px solid var(--line);background:var(--panel2)}
+.chip2.f1{border-color:color-mix(in srgb,var(--god) 45%,var(--line));color:var(--god)}
+.chip2.f2{border-color:color-mix(in srgb,var(--wolf) 45%,var(--line));color:var(--wolf)}
+.chip2.f3{border-color:color-mix(in srgb,var(--third) 45%,var(--line));color:var(--third)}
+.chip2.f4{border-color:color-mix(in srgb,var(--change) 45%,var(--line));color:var(--change)}
+.boardnote{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+.seatgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.seat{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--panel2);
+  padding:8px 6px 6px;text-align:center;cursor:pointer;min-width:0;transition:border-color .15s,background .15s}
+.seat:hover{border-color:var(--accent)}
+.seat.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel2));
+  box-shadow:0 0 0 1px var(--accent) inset}
+.seat.dead{opacity:.42;filter:grayscale(.7)}
+.seat .sno{font-size:11px;color:var(--muted);line-height:1.1}
+.seat .sname{width:100%;min-width:0;border:0;background:transparent;text-align:center;font-size:12.5px;
+  font-weight:600;padding:2px 0;color:var(--text);text-overflow:ellipsis}
+.seat .sname::placeholder{color:var(--muted);font-weight:400;opacity:.7}
+.seat .sused{font-size:10.5px;color:var(--muted);min-height:14px}
+.seat .dot{position:absolute;top:5px;left:5px;width:9px;height:9px;border-radius:50%;
+  border:1px solid var(--muted);background:transparent;padding:0}
+.seat:not(.dead) .dot{background:var(--good);border-color:var(--good)}
+.seat .spoken{position:absolute;top:3px;right:5px;font-size:10px;color:var(--good)}
+.seathint{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.6}
+
+.tiplist{margin:0;padding:0;list-style:none;max-height:230px;overflow:auto}
+.tiplist li{font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line);line-height:1.6}
+.tiplist li:last-child{border-bottom:0}
+.tiplist .tk{display:inline-block;font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
+  border-radius:5px;padding:0 5px;margin-right:6px;vertical-align:1px}
+.empty{color:var(--muted);font-size:12.5px;padding:8px 0}
+
+/* ---------- 弹层 ---------- */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(4,8,14,.72);display:grid;place-items:center;padding:16px}
+.sheet{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.sheet header{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.sheet header b{font-size:15px}
+.sheet header .x{margin-left:auto;color:var(--muted);font-size:20px;padding:0 6px}
+.sheet .sbody{padding:14px 16px;overflow:auto}
+.sheet .sfoot{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.searchrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.searchrow input{flex:1;min-width:180px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel2)}
+.filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filter button{padding:5px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.filter button.on{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .filter button.on{color:#fff}
+.blist{display:grid;gap:6px}
+.bitem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.bitem:hover{border-color:var(--accent)}
+.bitem.cur{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel2))}
+.bitem .bn{font-weight:600;font-size:13.5px}
+.bitem .bs{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bitem .bmeta{margin-left:auto;flex:none;text-align:right;font-size:11px;color:var(--muted)}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow .lbl b{font-size:13.5px;display:block}
+.setrow .lbl small{color:var(--muted);font-size:11.5px}
+.setrow input[type=number]{width:88px;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);text-align:center}
+.switch{width:44px;height:25px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .15s}
+.switch.on{background:var(--good)}
+.switch.on::after{left:22px}
+.btn{padding:8px 15px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);font-size:13px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .btn.primary{color:#fff}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+
+footer{color:var(--muted);font-size:11.5px;text-align:center;padding:20px 8px 4px;line-height:1.8}
+kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--panel2)}
+
+#selftestResult{position:fixed;top:0;left:0;z-index:9999;background:#000;color:#0f0;font-size:11px;
+  padding:8px;max-width:100%;white-space:pre-wrap;margin:0}
+
+@media(max-width:980px){
+  main{grid-template-columns:minmax(0,1fr)}
+  .sidepane{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sidepane #boardInfo{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .wrap{padding-left:11px;padding-right:11px}
+  .topbar .wrap{gap:7px;padding:8px 11px}
+  .brand small{display:none}
+  .brand b{font-size:13px}
+  .boardbtn{min-width:150px;flex:1 1 150px;max-width:none;padding:6px 9px}
+  .dayctl{order:3}
+  .tools{order:4;margin-left:0}
+  .tool{width:31px;height:31px;font-size:14px}
+  main{padding-top:11px;gap:11px}
+  .sidepane{grid-template-columns:1fr}
+  .sidepane #boardInfo{grid-column:auto}
+  .clockcard{padding:14px 11px 12px}
+  .stagebar{flex-wrap:wrap;overflow-x:visible;gap:5px;padding-bottom:8px}
+  .stagebar button{flex:1 1 calc(33.333% - 5px);text-align:center;padding:7px 3px;font-size:12px}
+  .controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .controls .primary{grid-column:1/-1}
+  .seatgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ringwrap{width:min(250px,68vw)}
+  #timeText{font-size:clamp(54px,17vw,86px)}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap">
+  <div class="brand"><span class="logo">⏱</span><div><b>法官计时器</b><small>狼人杀 · 离线单文件</small></div></div>
+  <button id="boardBtn" class="boardbtn" title="选择版型"><span class="bl">版型</span><span class="bn" id="boardBtnName">—</span><span class="caret">▾</span></button>
+  <div class="dayctl">
+    <button id="dayMinus" title="上一日">−</button><span class="dl" id="dayText">第 1 天 · ☀ 白天</span><button id="dayPlus" title="下一日">＋</button>
+    <button id="partBtn" title="切换白天/夜晚">☾</button>
+  </div>
+  <div class="tools">
+    <button class="tool" id="randBtn" title="随机抽板">🎲</button>
+    <button class="tool" id="themeBtn" title="切换明暗">🌗</button>
+    <button class="tool" id="muteBtn" title="声音开关">🔊</button>
+    <button class="tool" id="fsBtn" title="全屏">⛶</button>
+    <button class="tool" id="setBtn" title="设置">⚙</button>
+  </div>
+</div></div>
+
+<div class="wrap">
+<main>
+  <section class="timerpane">
+    <div class="stagebar" id="stageBar"></div>
+    <div class="clockcard" id="clockCard">
+      <div class="clockmeta"><span id="stageLabel">—</span><span id="dayLabel">—</span></div>
+      <div class="speaker" id="speakerName">1 号<small id="speakerSub">点击右侧座位可切换发言人</small></div>
+      <div class="ringwrap">
+        <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="ringbg" cx="110" cy="110" r="100"></circle>
+          <circle id="ringFg" cx="110" cy="110" r="100"></circle>
+        </svg>
+        <div class="time"><div id="timeText" class="mono">02:00</div><div id="stateText">准备</div></div>
+      </div>
+      <div class="controls">
+        <button class="primary" id="startBtn">▶ 开始</button>
+        <button id="resetBtn">↺ 重置</button>
+        <button id="minusBtn">−10s</button>
+        <button id="plusBtn">＋10s</button>
+        <button id="prevBtn">← 上一位</button>
+        <button id="nextBtn">下一位 →</button>
+      </div>
+      <div class="durations">
+        <span>本阶段时长</span><input type="number" id="durInput" min="5" max="3600" step="5" value="120"><span>秒</span>
+        <button class="chip" data-dur="60">60</button><button class="chip" data-dur="90">90</button>
+        <button class="chip" data-dur="120">120</button><button class="chip" data-dur="180">180</button>
+      </div>
+      <div class="usednote" id="usedNote"></div>
+    </div>
+  </section>
+
+  <aside class="sidepane">
+    <section class="card" id="boardInfo"><h3>📋 当前版型<span class="tag" id="boardTag"></span></h3><div class="body" id="boardInfoBody"></div></section>
+    <section class="card" id="seatsCard"><h3>🪑 座位表<span class="tag" id="seatsTag"></span></h3><div class="body"><div class="seatgrid" id="seatGrid"></div>
+      <div class="seathint">点座位＝切换发言人；点左上角绿点＝标记出局 / 复活（「下一位」自动跳过出局者）；名字可直接输入，自动存在本机。</div></div></section>
+    <section class="card" id="tipsCard"><h3>⚖️ 法官提醒<span class="tag" id="tipsTag"></span></h3><div class="body"><ul class="tiplist" id="tipList"></ul></div></section>
+  </aside>
+</main>
+<footer>
+  快捷键：<kbd>空格</kbd> 开始/暂停 · <kbd>←</kbd><kbd>→</kbd> 切人 · <kbd>R</kbd> 重置 · <kbd>+</kbd><kbd>−</kbd> 加减 10 秒 · <kbd>F</kbd> 全屏 · <kbd>M</kbd> 静音<br>
+  数据内嵌、无后端、无联网请求；<b>单独保存本页 index.html 即可离线使用</b>。版型数据来自本地 <code>werewolf.db</code> 版型配置，规则以主持人口径为准 · <span id="genText"></span>
+</footer>
+</div>
+
+<div class="modal hidden" id="boardModal"><div class="sheet">
+  <header><b>选择版型</b><span style="color:var(--muted);font-size:12px" id="boardCountText"></span><button class="x" data-close>✕</button></header>
+  <div class="sbody">
+    <div class="searchrow"><input id="boardSearch" placeholder="搜板名 / 身份名 / 分类，例如 预女猎守、阴阳师、网易官方"></div>
+    <div class="filter" id="seatFilter"></div>
+    <div class="blist" id="boardList"></div>
+  </div>
+  <div class="sfoot"><button class="btn" data-close>关闭</button></div>
+</div></div>
+
+<div class="modal hidden" id="settingsModal"><div class="sheet">
+  <header><b>设置</b><button class="x" data-close>✕</button></header>
+  <div class="sbody" id="settingsBody"></div>
+  <div class="sfoot"><button class="btn danger" id="clearBtn">清空本局记录</button><button class="btn primary" data-close>完成</button></div>
+</div></div>
+
+<pre id="selftestResult" hidden></pre>
+
+<script>
+window.TIMER_DATA = {"generated":"2026-11-08","rules":421,"boards":[{"id":1,"name":"9人 预女猎","seats":9,"category":"未收录清单","games":0,"note":"经典九人局，9+1","cards":[["狼人",2,3],["预言家",1,1],["女巫",1,1],["猎人",1,1],["村民",1,3]],"rules":[]},{"id":2,"name":"10人 预女猎","seats":10,"category":"未收录清单","games":0,"note":"十人局，10+1","cards":[["狼人",2,3],["预言家",1,1],["女巫",1,1],["猎人",1,1],["村民",1,4]],"rules":[]},{"id":3,"name":"12人 预女猎白","seats":12,"category":"网易官方","games":1,"note":"标准十二人局，12+1","cards":[["狼人",2,4],["预言家",1,1],["女巫",1,1],["猎人",1,1],["白痴",1,1],["村民",1,4]],"rules":[]},{"id":4,"name":"12人 狼王守卫","seats":12,"category":"网易官方","games":1,"note":"十二人进阶板，12+1","cards":[["狼人",2,3],["狼王",2,1],["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["村民",1,4]],"rules":[]},{"id":6,"name":"12人觉醒孤独少女","seats":12,"category":"网易官方","games":1,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["摄梦人",1,1],["狼人",2,4],["村民",1,3],["觉醒孤独少女",4,1]],"rules":[]},{"id":7,"name":"迷雾装甲","seats":12,"category":"其他版型","games":6,"note":"","cards":[["装甲狼",2,1],["猎人",1,1],["村民",1,4],["机械狼",2,1],["守卫",1,1],["女巫",1,1],["狼人",2,2],["通灵师",1,1]],"rules":[["特殊①","机械狼，装甲狼，首夜强制学习技能。"],["特殊②","机械狼学习装甲狼为双刀。"],["特殊③","装甲狼学习机械狼为机械狼学习的身份。"],["特殊④","机械守卫/装甲守卫只盾毒不弹毒，而且只有一次性的守人机会。"],["特殊⑤","机械通灵师/装甲通灵师是先验后刀。"],["特殊⑥","机械双刀/装甲双刀的两个狼刀都不破盾。但如果叠刀可以破盾。"],["特殊⑦","机械双刀/装甲双刀带刀时如果不开额外刀，则永久失去额外刀机会。"]]},{"id":9,"name":"12人预女猎白混","seats":12,"category":"其他版型","games":2,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["白神",1,1],["狼人",2,4],["村民",1,3],["混子",4,1]],"rules":[]},{"id":10,"name":"风声谍影","seats":10,"category":"10人版型","games":9,"note":"","cards":[["觉醒石像鬼",2,2],["预言家",1,1],["通灵师",1,1],["熊",1,1],["女巫",1,1],["猎人",1,1],["河豚",1,1],["摄梦人",1,1],["白猫",1,1]],"rules":[["角色配置","觉醒石像鬼×2、预言家×1、通灵师×1、熊×1、女巫×1、猎人×1、河豚×1、摄梦人×1、白猫×1（共10张）"],["胜利条件","屠城"],["转化者·阵营","被觉醒石像鬼转化后阵营变为狼人，跟随狼人一起获胜；第一天亮前收到提示，知道自己已加入狼人阵营。"],["转化者·限制","不与狼队见面、不能自爆；其余狼人阵营玩家（双觉醒石像鬼、其他转化者）未出局前，可以按「原身份」使用技能但不带刀；其余狼人全部出局后，存活转化者失去原技能并带刀。"],["转化者·查验","预言家查验：第一夜验显示「好人」，第二夜及之后验显示「狼人」。通灵师（魔镜）查验：转化者原是什么身份就显示什么身份。"],["特殊提醒·双转化者无刀","两名觉醒石像鬼都出局后，若场上只剩两名转化者，狼队无刀，直到其中一人出局剩一人才能刀。"],["技能·转化","参与狼队行动。转化（第一夜强制）：首夜狼刀等行动后单独睁眼，从与觉醒石像鬼座位相邻（左右；也可选另一名队友的邻座）的玩家里选一名，使其成为转化者。"],["视角","两名觉醒石像鬼互相可见；只能看到自己技能转化的目标。"],["查验","每晚查验一名玩家阵营，允许重复查验。查觉醒石像鬼为查杀；第一晚查转化者显示金水，第二晚起查转化者为查杀；其余均显示金水。"],["查验","每晚查验一名玩家的具体身份，不显示阵营。"],["咆哮","天亮时若熊存活且两侧存活玩家中存在狼人（含转化者、觉醒石像鬼），公布「熊咆哮了」，否则「熊没有咆哮」。本局采用白熊判定：看天亮那一刻。"],["用药","解药和毒药不能同一晚使用；仅首夜可以自救。"],["技能","出局时可以开枪。"],["技能","每晚选择一名玩家摄梦，被摄梦者成为梦游者，不会死亡；若摄梦人在夜里死亡，或连续两晚摄梦同一人，则梦游者被摄梦而死。"],["技能","因任何原因将出局时翻牌，并额外存活至下一次放逐投票阶段之后；翻牌后无法被选为任何目标，也不能作为放逐投票目标。"],["技能","放逐投票后河豚可主动翻牌，带走所有本次投给河豚的玩家，一局仅一次；若因此带走场上所有人，算狼人胜利。若夜间被狼刀击杀，则白天翻牌出局。"]]},{"id":11,"name":"12人狼王摄梦人","seats":12,"category":"网易官方","games":4,"note":"","cards":[["预言家",1,1],["女巫",1,1],["摄梦人",1,1],["猎人",1,1],["狼王",2,1],["狼人",2,3],["村民",1,4]],"rules":[]},{"id":12,"name":"迷雾鸦影","seats":12,"category":"网易官方","games":2,"note":"","cards":[["狼鸦之爪",2,1],["狼人",2,3],["炼金魔女",1,1],["预言家",1,1],["摄梦人",1,1],["白神",1,1],["村民",1,4]],"rules":[["角色配置","狼人阵营：1狼鸦之爪+3狼人"],["角色配置","好人阵营：1炼金魔女+1预言家+1摄梦人+1白神"],["技能","炼金魔女 (好人阵营神职)：拥有两个均限一次的强大技能。"],["技能","未明之雾：夜晚选择3名玩家，当晚狼人只能且必须从中选一人袭击。"],["技能","法老之蛇：可得知当夜狼人袭击目标，并在白天投票前选择是否救活。持有且存活时，白天流程变为先发言投票，后公布死讯。另外，炼金魔女首夜可以自救。"],["技能","狼鸦之爪 (狼人阵营)：开局被“封印”，夜间不与狼队见面、不参与杀人，但其他狼人知道其身份。"],["技能","觉醒条件：当夜晚存活狼人总数少于3人时解除封印。"],["技能","觉醒技能“狼鸦之刃”：觉醒后获得一次无视一切防御的“必杀”刀，在狼队杀人结束后可再单独杀一人。"]]},{"id":13,"name":"12人画皮食尸鬼","seats":12,"category":"暂停开放","games":1,"note":"","cards":[["狼人",2,2],["噩梦之影",2,1],["画皮",2,1],["通灵师",1,1],["女巫",1,1],["食尸鬼",1,1],["摄梦人",1,1],["村民",1,4]],"rules":[]},{"id":14,"name":"12人鬼魂新娘","seats":12,"category":"未收录清单","games":0,"note":"12人局，身份池 14 张（村民5 预言家1 女巫1 猎人1 守卫1 狼人3 鬼魂新娘1 盗贼1）。盗贼从池里抽牌：随机隐藏 2 张，其余 12 张分发给玩家，故牌数 14 > 座位数 12。鬼魂新娘为第三方；新郎、证婚人由鬼魂新娘产生，记录时用「最终阵营=第三方」表示。","cards":[["村民",1,5],["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["狼人",2,3],["盗贼",4,1],["鬼魂新娘",3,1]],"rules":[["判胜制","狼人屠边即可直接获胜"],["鬼魂新娘","第三方阵营。首夜选择一名玩家成为新郎并结为情侣，情侣每晚睁眼互通信息；首夜情侣共同选择一名玩家成为证婚人，证婚人知晓情侣身份；新郎与证婚人背叛原有阵营，一并加入第三方阵营，第三方屠城获胜；狼人全部死亡后，情侣可在夜间继续刀杀玩家；若情侣殉情一同出局，则由证婚人带刀。"],["狼人刀法","狼人必须统一意见，否则空刀处理"],["进群","夜间只有新郎、新娘进群"]]},{"id":15,"name":"机械狼通灵师","seats":10,"category":"10人版型","games":19,"note":"10人，屠边，狼刀在先","cards":[["通灵师",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["狼人",2,2],["机械狼",2,1],["村民",1,3]],"rules":[["胜利条件","屠边，遵循狼刀在先原则"]]},{"id":16,"name":"时波之乱","seats":12,"category":"网易官方","games":4,"note":"12人，房规允许双爆、禁数学题","cards":[["预言家",1,1],["女巫",1,1],["守卫",1,1],["白昼学者",1,1],["狼人",2,3],["寂夜导师",2,1],["村民",1,4]],"rules":[["胜利条件","屠边"],["特殊规则","允许双爆，禁数学题"],["角色配置","神职阵营：预言家、女巫、守卫、白昼学者"],["角色配置","狼人阵营：3普通狼人、1寂夜导师"],["角色配置","平民阵营：4平民"],["技能","阵营：好人阵营，神职。"],["技能","从第二个夜晚开始，白昼学者可以对除自己以外的一名玩家使用：增益、削弱"],["技能","白昼学者整局只有一次增益、一次削弱；同一夜只能使用其中一种。技能可以留到后续夜晚使用，但一旦发动后不能再次使用。"],["技能","阵营：狼人阵营，但属于不见面狼。"],["技能","其基本状态为：普通狼人知道寂夜导师是谁；寂夜导师不知道普通狼人是谁；不参加狼人夜间讨论；在其他狼人死光前没有普通狼刀参与权；不能自爆；当其他所有狼人阵营玩家均已出局后，寂夜导师才获得单独刀人能力。她从第二夜起同样拥有一次增益和一次削弱，同一夜只能使用其中一种。技能可以留到后续夜晚使用，但一旦发动后不能再次使用。"],["技能","预言家可以查验两名不同玩家"],["技能","守卫可以守护两名不同玩家（额外守护任意选择玩家）"],["技能","女巫获得一次额外毒人机会"],["技能","普通狼人狼队获得一次额外刀"],["技能","对白昼学者或寂夜导师无效"],["技能","预言家当夜不能查验"],["技能","守卫当夜不能守护"],["技能","女巫当夜不能使用毒药，但仍可使用解药"],["技能","任意一名普通狼人整个普通狼队当夜不能发动正常狼刀"],["技能","白昼学者或寂夜导师无效"],["技能","同时选中同一名好人：两人的增幅/削弱均失效，该好人直接出局。"],["技能","两人各自都选中普通狼人：无论是不是同一只狼人，寂夜导师出局"]]},{"id":17,"name":"动物梦境II","seats":12,"category":"未收录清单","games":0,"note":"12人屠边，有警长，狼人双爆吞警徽，狼人首夜无刀","cards":[["兔子",1,4],["熊",1,1],["企鹅",1,1],["狐狸",1,1],["乌鸦",1,1],["狼人",2,2],["狼王",2,2]],"rules":[["胜利条件","屠边"],["特殊规则","狼人阵营首夜无刀"]]},{"id":18,"name":"云端探查","seats":12,"category":"网易官方","games":8,"note":"12人屠边，有警长；孤独少女是唯一平民","cards":[["预言家",1,1],["觉醒预言家",1,1],["魔镜少女",1,1],["纯白之女",1,1],["女巫",1,1],["猎人",1,1],["守墓人",1,1],["孤独少女",4,1],["狼美人",2,1],["隐狼",2,1],["觉醒隐狼",2,1],["咒狐",3,1]],"rules":[["胜利条件","屠边"],["特殊规则","孤独少女是唯一的平民"],["角色配置","好人神职7人：预言家、觉醒预言家、魔镜少女、纯白之女、女巫、猎人、守墓人；平民1人：孤独少女；狼人3人：狼美人、隐狼、觉醒隐狼；第三方1人：咒狐。共12张。"],["胜利条件·狼人","咒狐必须先出局。咒狐出局后，杀光全部7名神职，或杀掉唯一的平民（孤独少女）。"],["胜利条件·好人","咒狐必须先出局。咒狐出局后，放逐所有狼人。"],["胜利条件·咒狐","当狼人阵营或好人阵营即将达成胜利（所有平民/神职/狼人出局）时，若咒狐仍存活，咒狐取代原获胜方，成为唯一胜利者。"],["狼队夜行规则","三狼互不见面（狼美人、隐狼、觉醒隐狼夜间互不知晓身份）；隐狼可以看到狼美人与觉醒隐狼的位置；只有狼美人能在夜间发动攻击，狼美人出局后剩余狼人无法刀人。"],["查验对照表","隐狼：预言家查为好人，魔镜少女/纯白之女/守墓人查为狼人。咒狐：预言家查为好人但立刻出局，魔镜少女/纯白之女查为咒狐，守墓人查为好人。模仿咒狐的觉醒隐狼：守墓人查为狼人。"],["特性","第三方阵营，免疫狼刀。被预言家、觉醒预言家查验视为好人，但会立刻出局。单独获胜条件见「胜利条件·咒狐」。"],["榜样","本版型中孤独少女是唯一的平民。首夜选择一名玩家作为榜样，随后加入其阵营。"],["模仿","模仿咒狐→被预言家查验会出局；模仿预言家/觉醒预言家→可获得查验对象的阵营信息；模仿纯白之女/魔镜少女→查验具体身份且不会使其出局；模仿狼美人→可魅惑一名玩家，但出局后不显示为狼美人出局；模仿孤独少女→被视为孤独少女，但无法选择榜样；模仿隐狼→可看到其他狼人位置但不能交流。"],["查验","被预言家查为好人；被魔镜少女、纯白之女、守墓人查为狼人。"],["查验","每晚选择两名玩家，查验他们之间是否存在狼人。查中咒狐会使其立刻出局。"],["查验","每晚可查验一名玩家的具体身份。"],["查验","每晚可查验一名玩家的具体身份；从第二晚开始，若查验到狼人，该狼人直接出局。"],["查验","每晚可查验前一晚被放逐玩家的具体身份。"],["用药","一瓶解药一瓶毒药，夜间可用；女巫全程不能自救。"],["技能","出局时可以开枪带走一名玩家。"]]},{"id":19,"name":"黑商狼兄弟","seats":12,"category":"其他版型","games":1,"note":"12人，2普狼+狼兄+狼弟 / 预女守黑市商人 / 4平民","cards":[["预言家",1,1],["女巫",1,1],["守卫",1,1],["黑市商人",1,1],["狼人",2,2],["狼兄",2,1],["狼弟",2,1],["村民",1,4]],"rules":[["本局规则","狼人阵营屠边胜利。"],["角色配置","狼人阵营：2普通狼人+1狼兄+1狼弟；神职阵营：预言家+女巫+守卫+黑市商人；平民阵营：4平民"],["狼兄·互认","第一晚睁眼与狼弟互认，随后入狼队行凶。不可以自曝，不可以自刀。"],["狼弟·初始状态","第一晚睁眼与狼兄互认，初始不入狼队。狼兄死亡前，被预言家查验为好人（即使当晚狼兄死亡，仍被验为好人）。"],["狼弟·入队时机","狼兄夜晚出局时，当晚狼弟可在狼队行凶后额外行凶一次，并在之后的夜晚和狼人一起睁眼行凶；狼兄白天出局时，下一晚狼弟可在狼队行凶后额外行凶一次，并在之后的夜晚和狼人一起睁眼行凶。"],["狼弟·额外刀","狼弟额外一刀无法被女巫看见，无法被守卫守护。入狼队后狼弟可以自曝、可以自刀。"],["黑市商人·赠与","可以赠与一名玩家查验、毒药或猎枪。若该名玩家为好人，则从下一晚开始可以使用这个技能；若为狼人，则黑市商人出局。若赠与的是猎枪，则当天白天即可使用。"]]},{"id":20,"name":"觉醒狼王","seats":12,"category":"网易官方","games":5,"note":"12人屠边，女巫全程不可自救","cards":[["预言家",1,1],["女巫",1,1],["奇迹商人",1,1],["摄梦人",1,1],["觉醒狼王",2,1],["狼人",2,3],["村民",1,4]],"rules":[["胜利条件","屠边，狼人杀光神职或平民；女巫不可自救"],["角色配置","狼人阵营 (4人)：觉醒狼王 x 1、狼人 x 3。"],["角色配置","好人阵营 (8人)："],["特殊规则","神职 (4人)：预言家 x 1、女巫 x 1、奇迹商人 x 1、摄梦人 x 1。"],["特殊规则","平民 (4人)：普通村民 x 4。"],["房规","规则补充：采用屠边规则（狼人杀光所有神职或所有平民获胜）；女巫全程不可自救；遵循狼刀在先原则。"],["技能","核心技能“狼王爪”：初始拥有两次“狼王爪” 技能。"],["技能","夜间传枪：每晚可将一个“狼王爪” 传给一名存活的狼队友（每夜限一次，不能收回）。"],["技能","出局开枪：出局时可发动“狼王爪”带走一名玩家。若未传出技能，则可连续发动两次带走两人。"],["技能","核心技能“幸运儿”：每局游戏限一次，在夜晚第一个行动，选择一名其他玩家成为“幸运儿”。"],["机制","可赠予技能：从以下三个一次性技能中选择一个赠予："],["技能","1. 预言家的查验：可查验一名玩家身份。"],["技能","2. 女巫的毒药：可使一名玩家出局。"],["技能","3. 守卫的守护：可守护一名玩家免受夜间伤害。"],["技能","风险与惩罚：若“幸运儿”是狼人，对方不会获得技能，且次日奇迹商人会出局"]]},{"id":21,"name":"邪恶商人","seats":12,"category":"其他版型","games":1,"note":"12人屠边，双爆吞警徽，女巫不可自救","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["邪恶商人",2,1],["狼人",2,3],["村民",1,4]],"rules":[["胜利条件","屠边；双爆吞警徽，女巫全程不可自救"]]},{"id":22,"name":"谍报风云","seats":12,"category":"未收录清单","games":0,"note":"12人屠边，有警长，通灵师强制上警","cards":[["通灵师",1,1],["女巫",1,1],["摄梦人",1,1],["侦察者",1,1],["刺客",2,1],["间谍",2,1],["狼人",2,2],["村民",1,4]],"rules":[["胜利条件","屠边"],["特殊规则","通灵师强制上警"]]},{"id":23,"name":"黑蝙蝠","seats":12,"category":"未收录清单","games":0,"note":"12人，预女猎守+黑蝙蝠+3普狼+4村民，双爆吞警徽、女巫不可自救、狼人屠边","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["狼人",2,3],["黑蝙蝠",2,1],["村民",1,4]],"rules":[["本局规则","双爆吞警徽，女巫全程不可自救。狼人阵营屠边胜利。"],["角色配置","预女猎守 + 黑蝙蝠 + 3普通狼人 + 4普通村民"],["黑蝙蝠·自爆/自刀","无法自爆，可以自刀，与狼人们一起行动。"],["黑蝙蝠·庇护","每晚行凶之后，可以庇护一名玩家，每名玩家限庇护一次。"],["黑蝙蝠·反弹毒药","被庇护玩家成为毒药目标时，反弹杀死撒毒者；当晚毒药效果失效。"],["黑蝙蝠·反弹守护","被庇护玩家成为守护目标时，反弹杀死使用守护者；当晚守护效果仍然有效。"],["黑蝙蝠·同时命中","若同一夜被庇护玩家同时被守护和撒毒，反弹作用于守护效果，该玩家依旧会被毒杀。"],["黑蝙蝠·触发次数","反弹效果只能被触发一次；反弹生效一次后，黑蝙蝠失去庇护技能。"]]},{"id":24,"name":"盗宝大师","seats":12,"category":"未收录清单","games":0,"note":"12人（盗宝大师2.0）","cards":[["通灵师",1,1],["女巫",1,1],["猎人",1,1],["摄梦人",1,1],["狼枪",2,1],["盗宝",2,1],["狼人",2,2],["村民",1,4]],"rules":[]},{"id":25,"name":"石像鬼守墓人","seats":12,"category":"网易官方","games":3,"note":"12人，预言家+女巫+猎人+守墓人 / 3狼人+石像鬼 / 4村民","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["守墓人",1,1],["狼人",2,3],["石像鬼",2,1],["村民",1,4]],"rules":[["角色配置","神职：预言家+女巫+猎人+守墓人；狼人：3狼人+石像鬼；平民：4村民"],["石像鬼","狼人阵营，可查验一名玩家的具体身份。"],["角色配置","神职阵营：预言家，女巫，猎人，守墓人"],["角色配置","狼人阵营：石像鬼，3小狼"],["角色配置","平民阵营：4平民"],["房规","房规：预言家必须上警，其余格式不限"],["技能","守墓人：每晚得知上一个白天被放逐玩家是好人还是狼人；首夜没有放逐，无信息；只知道阵营，不知道具体身份"],["技能","如果狼人自爆，守墓人不睁眼"],["技能","石像鬼：不能自爆，与小狼不见面，每晚最先行动，查验一名玩家的具体身份（预言家 / 女巫 / 猎人 / 守墓人 / 平民 / 狼人）"],["技能","小狼全部出局后，石像鬼带刀，行动顺序为先查验后刀人"]]},{"id":26,"name":"深梦迷航II","seats":12,"category":"其他版型","games":1,"note":"","cards":[["猎人",1,1],["村民",1,4],["炼金魔女",1,1],["觉醒摄梦人",1,1],["狼人",2,2],["狼鸦之爪",2,1],["预言家",1,1],["噩梦之影",2,1]],"rules":[["特殊规则","预言家+炼金魔女+觉醒摄梦人+猎人"],["特殊规则","2小狼+噩梦之影+狼鸦之爪"]]},{"id":27,"name":"觉醒石像鬼","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["村民",1,4],["女巫",1,1],["预言家",1,1],["守卫",1,1],["觉醒石像鬼",2,1],["猎人",1,1],["狼人",2,2],["守墓人",1,1]],"rules":[["角色配置","好人阵营 ：预言家、女巫、猎人、守卫、守墓人、4名平民。"],["角色配置","狼人阵营 ：觉醒石像鬼 + 2名普通狼人。"],["技能","觉醒石像鬼 (狼人阵营)：拥有技能 【幻惑人心】 。首夜必须发动，选择一名与狼人阵营相邻的好人玩家，将其转化为“转化者”。自身可自爆、自刀，并参与狼队夜间讨论和袭击。"],["技能","转化者 (原好人阵营)：被转化后在第一天白天前立即知晓自己变为狼人阵营。但不与狼队见面，也不能自爆。在其余狼人出局前，可继续使用原有技能。当其他狼人全部出局后，转化者会失去原有技能，并在夜间获得爪击能力，可以刀人。"]]},{"id":28,"name":"觉醒女巫","seats":12,"category":"网易官方","games":4,"note":"","cards":[["狼人",2,3],["村民",1,4],["觉醒女巫",1,1],["守卫",1,1],["觉醒狼王",2,1],["预言家",1,1],["猎人",1,1]],"rules":[["角色配置","好人阵营 (4神4民)：预言家、守卫、猎人、觉醒女巫；4名普通村民。"],["角色配置","狼人阵营 (4狼)：觉醒狼王 + 3名普通狼人。"],["特殊规则","核心角色说明"],["技能","觉醒女巫（好人神职）：拥有1瓶解药和3次“调剂毒药” 机会。使用毒药时需召集协助者（第1/2/3次分别需1/2/3名，不能选选过的玩家），全员同意后毒药才生效。"],["技能","觉醒狼王（狼人阵营）：被放逐、狼刀或猎枪出局时，可开1到2枪带走对应数量玩家（自爆、被毒则无法开枪）。每晚行动后，可将手里的枪分给一名狼人阵营的玩家。普通狼人最多只能被分一枪。"]]},{"id":29,"name":"狼王魔术师","seats":12,"category":"网易官方","games":2,"note":"","cards":[["预言家",1,1],["女巫",1,1],["魔术师",1,1],["猎人",1,1],["狼王",2,1],["狼人",2,3],["村民",1,4]],"rules":[["角色配置","神职阵营：预言家，女巫，魔术师，猎人"],["角色配置","狼人阵营：狼王，3小狼"],["角色配置","平民阵营：4平民"],["房规","房规：预言家必须上警，其余格式不限"],["技能","狼王：可以自刀，可以自爆，白天被放逐，晚上被刀杀，白天晚上被猎人枪杀都能开枪，吃毒，梦亡不能开枪"],["技能","魔术师：夜间最先行动，每晚可选 2 名存活玩家互换号码，当夜生效。"],["技能","交换生效：狼刀、预言家验人、女巫毒的目标互换"],["技能","规则：每名玩家整局最多只能被交换一次；可换自己；交换仅夜间生效，不影响白天猎人 / 狼王开枪"],["技能","举例：换 A、B，狼刀 A，法官告知女巫 A 中刀，不救则 B 出局；预言家验 A，拿到的是 B 身份"]]},{"id":30,"name":"盗贼丘比特","seats":12,"category":"网易官方","games":3,"note":"14 张牌 / 12 席：盗贼额外抽 2 张底牌（选 1 埋 1）。牌数比座位数多 2，属正常规则。","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["白痴",1,1],["村民",1,5],["狼人",2,2],["狼王",2,1],["盗贼",4,1],["丘比特",3,1]],"rules":[["牌数","14 张牌 / 12 席"],["阵营","变动阵营"],["技能","开局从 2 张未发放的底牌中选 1 张作为身份，另 1 张埋掉"],["记录方式","主身份记「实际选中的那张牌」"],["阵营","第三方"],["连情侣","第一夜选择两名玩家成为情侣"],["殉情","一方死亡另一方殉情"],["胜利条件","文档未注明"],["角色配置","配置：预女猎白，5平民，2狼1狼王，盗贼，丘比特"]]},{"id":31,"name":"狼美人骑士","seats":12,"category":"网易官方","games":2,"note":"","cards":[["预言家",1,1],["村民",1,4],["狼美人",2,1],["守卫",1,1],["狼人",2,3],["骑士",1,1],["女巫",1,1]],"rules":[]},{"id":32,"name":"真假美猴王","seats":12,"category":"其他版型","games":3,"note":"","cards":[["摄梦人",1,1],["村民",1,4],["狼人",2,2],["狼王",2,1],["齐天大圣",1,1],["暗黑悟空",2,1],["天命圣僧",1,1],["女巫",1,1]],"rules":[]},{"id":33,"name":"狼魂烛影","seats":12,"category":"暂停开放","games":1,"note":"","cards":[["村民",1,4],["剪烛人",1,1],["烟烛",2,3],["摄梦人",1,1],["女巫",1,1],["保佑者",1,1],["毒魂烛台",1,1]],"rules":[]},{"id":34,"name":"侍女觉女","seats":12,"category":"暂停开放","games":1,"note":"","cards":[["狼美人",2,1],["蚀日侍女",2,1],["村民",1,3],["狼人",2,2],["流光伯爵",1,1],["猎人",1,1],["预言家",1,1],["觉醒孤独少女",4,1],["觉醒女巫",1,1]],"rules":[["角色配置","狼人阵营：2狼人 1狼美人 1蚀日侍女"],["角色配置","神职阵营：预言家 觉醒女巫 猎人 流光伯爵"],["角色配置","平民阵营：3平民"],["特殊规则","变动阵营：1觉醒孤独少女"]]},{"id":35,"name":"月灵狼","seats":12,"category":"其他版型","games":1,"note":"","cards":[["狼人",2,2],["村民",1,4],["名媛",1,1],["噩梦之影",2,1],["女巫",1,1],["月灵",2,1],["骑士",1,1],["预言家",1,1]],"rules":[["角色配置","神职阵营：预言家+女巫+骑士+名媛"],["角色配置","狼人阵营：月灵+噩梦之影+2小狼"],["角色配置","平民阵营：4平民"],["特殊规则","月灵属于狼人阵营；每晚在狼人集体行动之前，噩梦之影行动后，如果月灵两侧存活玩家中存在神职且没有被恐惧，则月灵嗥叫，否则不嗥叫；月灵的嗥叫所有玩家均可见。"],["特殊规则","检测时间点为噩梦之影行动后，报告时间点为同一时间。"],["技能","名媛：摄梦人技能，不能连续两晚选择同一个人，技能不能保护毒药伤害"]]},{"id":36,"name":"灯影预言家官混","seats":12,"category":"其他版型","games":1,"note":"","cards":[["预言家",1,1],["女巫",1,1],["摄梦人",1,1],["骑士",1,1],["狼人",2,3],["食梦貘",2,1],["灯影预言家",1,1],["村民",1,3]],"rules":[["角色配置","神职阵营：预言家、女巫、摄梦人、骑士"],["角色配置","狼人阵营：3狼、食梦貘"],["角色配置","平民阵营：灯影预言家、3民"],["技能","食梦貘：不入狼队，其他狼人死亡后带刀。所有对你使用的神职或平民能力，改为对他们自己使用。"],["技能","tips：由于女巫不允许对自己使用解药，选择救起食梦貘会导致自己被解药奶穿出局，且食梦貘被狼刀必然出局"],["技能","灯影预言家验食梦貘，等于查验自己，显示狼人"],["技能","预言家查验食梦貘，等于查验自己，显示好人"],["技能","摄梦人梦游食梦貘，视为梦游自己，如果连续两晚梦游食梦貘将视为连续两晚梦游自己，自己会被扎死"]]},{"id":37,"name":"丘比特奇缘","seats":12,"category":"网易官方","games":1,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["白痴",1,1],["摄梦人",1,1],["乌鸦",1,1],["狼王",2,1],["噩梦之影",2,1],["狼巫",2,1],["蚀时狼妃",2,1],["丘比特",3,1],["觉醒孤独少女",4,1]],"rules":[["角色配置","好人阵营：预言家、女巫、猎人、白痴、摄梦人、乌鸦"],["角色配置","狼人阵营：狼王、噩梦之影、狼巫、蚀时狼妃"],["特殊规则","变动阵营：丘比特、孤独少女"],["胜利条件","胜利条件：屠城（非己方阵营全部出局）"],["房规","房规：禁止不尊重底牌的让胜谈判，其余格式不限"],["行动顺序","行动顺序：孤独少女，丘比特，噩梦之影，（其余好人），蚀时狼妃，狼队，狼巫，女巫，猎人"],["技能","乌鸦：每晚可以暗中诅咒一名玩家，该玩家在下一个白天放逐投票时，会额外被投一票，不能连续两晚诅咒同一名玩家"],["技能","蚀时狼妃：封锁一名玩家。当晚好人阵营对该玩家的验人、毒药等技能，都会反作用于施法者自身。该技能整局游戏只能生效一次"],["示例","tips：孤独少女代码比丘比特高"]]},{"id":38,"name":"青丘夜影","seats":12,"category":"其他版型","games":2,"note":"","cards":[["狼人",2,3],["村民",1,4],["女巫",1,1],["九尾",1,1],["觉醒守卫",1,1],["预言家",1,1],["白泽",1,1]],"rules":[]},{"id":39,"name":"暗夜星辰","seats":12,"category":"网易官方","games":1,"note":"","cards":[["村民",1,4],["狼人",2,3],["守卫",1,1],["觉醒猎人",1,1],["女巫",1,1],["觉醒狼美人",2,1],["预言家",1,1]],"rules":[["角色配置","神职阵营：预言家，女巫，守卫，觉醒猎人"],["角色配置","狼人阵营：觉醒狼美人，3小狼"],["角色配置","平民阵营：4平民"],["技能","觉醒狼美人："],["技能","挽歌幻象：技能效果：夜晚参与狼人行动后，可单独睁眼魅惑一名玩家。当觉醒狼美人首次面临出局（被投票放逐或被技能击杀）时，被魅惑的玩家会替代她出局"],["技能","发动限制：该技能每隔一晚可以发动一次，但全局游戏仅能生效一次。此外，觉醒狼美人不能自曝身份，也不能在夜间选中自己出局"],["技能","巡猎：当觉醒猎人出局后，可以选择正序或逆序发动“巡猎”，使该方向上最近的一名狼人出局"],["技能","如果觉醒猎人是在夜间出局（包括被狼人击杀或被女巫毒杀），他在白天发动巡猎时，可以无视特殊狼人的技能，例如觉醒狼美人的“挽歌幻象”，直接将其击杀"]]},{"id":40,"name":"诡术之境","seats":12,"category":"其他版型","games":3,"note":"","cards":[["村民",1,4],["狼人",2,3],["定序王子",1,1],["魔术师",1,1],["诡术师",1,1],["女巫",1,1],["预言家",1,1]],"rules":[["角色配置","狼人阵营：1诡术师+3狼人"],["角色配置","好人阵营：1预言家+1女巫+1魔术师+1定序王子+4平民"],["技能","每晚可选择交换两名存活玩家的号码牌："],["技能","每个玩家全局只能被交换一次"],["技能","可选择空换（不发动技能），但不能连续两晚空换"],["技能","被交换的玩家在白天被放逐时，出局信息置换"],["技能","第一晚先交换再入狼队刀人"],["技能","诡术师影响白天的信息，魔术师影响晚上的技能目标。"],["技能","每晚可交换两名存活玩家的号码牌："],["技能","规则与诡术师类似：每个玩家全局只能被交换一次"],["技能","交换后，当晚所有技能（查验、刀法等）的目标会互换"],["技能","翻牌技能：在放逐投票结束后可翻牌发动技能，重新组织投票："],["技能","发动时享有一次额外发言权"],["技能","全局仅限使用一次"],["示例","彩蛋：如果魔术师和诡术师交换的号码完全一致，那么当晚和当天两者的技能都失效"]]},{"id":41,"name":"孤独少女影子复仇者","seats":12,"category":"暂停开放","games":1,"note":"12人局。平民×3 孤独少女1 预言家1 女巫1 守卫1 狼人×3 影子1 复仇者1；除孤独少女外被查验非狼即金。影子随主人，复仇者与主人对立，影子指认孤独少女/复仇者时成第三方屠城。变动阵营。","cards":[["女巫",1,1],["守卫",1,1],["影子",1,1],["村民",1,3],["狼人",2,3],["孤独少女",4,1],["预言家",1,1],["复仇者",4,1]],"rules":[["阵营配置","平民×3 孤独少女×1 预言家×1 女巫×1 守卫×1 狼人×3 影子×1 复仇者×1（共 12 张）"],["本局规则","除孤独少女之外，被查验者非狼即金"],["影子·首夜指认","首夜指认一名玩家作为主人，之后不可更改"],["影子·好人主人","主人为好人阵营 → 影子属于好人阵营神职"],["影子·继承方式","主人死亡后，影子继承主人身份与技能状态，在主人应睁眼的轮次睁眼使用技能"],["影子·狼人主人","主人为狼人阵营 → 影子为狼人阵营，主人死亡后的下一夜可与狼人睁眼商量战术刀杀玩家"],["影子·指认孤独少女","影子与孤独少女为第三方阵营，屠城获胜；孤独少女死亡后影子获得摄梦人能力"],["影子·查验","变身前被查验永远显示好人；变身后按继承的具体身份判定"],["复仇者·阵营","阵营与影子指认的主人所在阵营对立，复仇者本人知晓此事"],["复仇者·狼阵营特性","为狼人阵营时被查验为狼人，不与狼人见面；狼人全部死亡后复仇者带刀"],["复仇者·刺杀","任意方式死亡时可发动刺杀，指定一名玩家：同阵营则刺杀失败（不死），不同阵营则被刺杀者立刻死亡"],["复仇者·刺杀变身前影子","若被刺杀者为变身前的影子，则复仇者转变为第三方并获胜"],["第三方·确认","若影子指认复仇者本人，或通过指认孤独少女间接指认到复仇者，则双方得知同为第三方阵营，屠城获胜"],["胜利条件","好人阵营：消灭全部狼人（含影子若为狼）；狼人阵营：屠边获胜；第三方：屠城获胜"],["发言时间","白天顺序发言 3 分钟，自由发言 5 分钟"]]},{"id":42,"name":"寻香识命","seats":12,"category":"网易官方","games":1,"note":"","cards":[["觉醒预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["村民",1,4],["狼人",2,3],["寻香魅影",2,1]],"rules":[["角色配置","神职阵营：觉醒预言家，女巫，猎人，守卫"],["角色配置","狼人阵营：3小狼，1寻香魅影"],["角色配置","平民阵营：4平民"],["技能","觉醒预言家：每晚查验两名玩家（可以选自己），两名都为好人则显示双好人，两名只要有至少一名狼人则显示疑似狼人"],["技能","寻香魅影：不能自爆，开局不和 3 小狼见面，首夜随机看见 1 个小狼号码，不参与狼队刀人讨论。只有场上另外 3 只普通狼全部出局，寻香魅影才获得狼刀，开始夜间杀人。"],["技能","技能：氤氲缠绕：每晚可以选任意 2 名存活玩家绑定（可绑自己），被绑者不知道被绑定，可重复绑定。当天只要其中一人出局，另一人直接跟随出局。全局只能触发 1 次跟随出局，触发后技能作废"],["示例","FAQ：跟随出局的猎人不能发动技能"]]},{"id":43,"name":"捣蛋鬼","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["村民",1,4],["狼人",2,3],["捣蛋鬼",2,1]],"rules":[["角色配置","配置：预女猎守+4平民"],["特殊规则","3狼人+捣蛋鬼（大小狼不见面）"],["技能","捣蛋鬼：每晚必须对除自己以外的一名玩家使用“耍宝”技能，该玩家是平民则没有效果。如果该玩家为非平民且在当晚行动，“耍宝”技能会使其技能目标更改为该玩家自己；不能连续两晚对同一玩家使用“耍宝”技能。捣蛋鬼并不知道自己“耍宝”是否成功，也不知道耍宝后产生的效果"],["示例","例：女巫在用毒当夜被“耍宝”，毒药视为对自己使用（解药使用目标不会受“耍宝”影响）"],["技能","守卫在非空守的夜里被“耍宝”，视为自守，若因为“耍宝”干扰连续两天自守则守卫出局"],["技能","猎人在可以正常开枪的夜里被“耍宝”，若猎人次日白天出局且选择发动技能，则白天带人目标变为自己"],["技能","预言家被“耍宝”查验任何人视为查验自己（均为好人）"],["技能","狼人被“耍宝”则被“耍宝”的狼人视为自刀"]]},{"id":44,"name":"觉醒之夜","seats":12,"category":"网易官方","games":1,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎魔人",1,1],["觉醒愚者",1,1],["村民",1,4],["狼人",2,3],["夜之贵族",2,1]],"rules":[["角色配置","好人阵营（8人）：预言家、女巫、猎魔人、觉醒愚者、4名平民。"],["角色配置","狼人阵营（4人）：3名普通狼人、夜之贵族。"],["特殊规则","关键角色技能"],["技能","猎魔人：从第二晚起，每晚可狩猎一名玩家。若目标是狼人，目标出局；若目标是好人，则猎魔人自己出局。女巫毒药对其无效。"],["技能","觉醒愚者（核心技能“秘密之身”）："],["技能","自我保护：白天被放逐时可翻牌免死，之后失去技能。"],["技能","夜间守护：夜间可保护一名玩家抵消一次伤害（如狼刀、毒药等）。若目标当晚未受伤，则守护会转而保护自己。成功抵挡一次伤害后技能失效。"],["技能","限制：不能连续两晚保护同一人。"],["技能","夜之贵族：从第二晚起，可在狼人行动后选择一名“夜仆”。该“夜仆”会在下一晚天亮时出局，且不改变原有阵营和技能。只有夜之贵族知道“夜仆”身份。当前有“夜仆”存活时，无法选择新目标。"],["机制","技能联动与特殊规则"],["技能","猎魔人 vs 夜仆：若猎魔人狩猎到“夜仆”，会解除其夜仆状态，且双方都不会出局。"],["技能","游戏规则：采用屠边规则（狼人杀光所有神职或平民获胜）；女巫全程不可自救；双爆吞警徽（狼人自爆则警徽流失）。"]]},{"id":45,"name":"误闯天家","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["女巫",1,1],["白神",1,1],["摄梦人",1,1],["骑士",1,1],["村民",1,3],["狼人",2,4]],"rules":[]},{"id":46,"name":"12人机械狼通灵师","seats":12,"category":"网易官方","games":9,"note":"12人版：通灵师/女巫/猎人/守卫 + 3狼1机械狼 + 4平民","cards":[["通灵师",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["村民",1,4],["狼人",2,3],["机械狼",2,1]],"rules":[["角色配置","神职阵营：通灵师，女巫，猎人，守卫"],["角色配置","狼人阵营：3狼人，1机械狼"],["角色配置","平民阵营：4平民"],["技能","通灵师：每晚查验一名玩家的具体身份，如果验到已学习身份的机械狼，显示的是机械狼学习的身份"],["技能","机械狼：不与狼队见面，小狼死完后带刀，技能是可以任意夜晚选一名存活玩家学习，得知对方身份，但是只能学习一次，并且下一晚才可以开始使用"],["技能","学平民：无技能，通灵师验你显示平民。"],["技能","学通灵师：每晚可以查验一人具体身份。"],["技能","学女巫：只获得毒药，没有解药"],["技能","学猎人：出局可以开枪带人。"],["技能","学守卫：获得守护技能，遵循守卫规则，如果女巫毒到了你守护的玩家，可以反弹女巫的毒药导致女巫死亡，且守护对象不死"],["技能","学普通狼人：小狼死完后，可以在带刀的当夜或者之后的夜晚开出一次额外的可以无视守卫守护的刀，但是只能开出一次"],["行动顺序","行动顺序：机械狼学习，守卫，狼人，女巫，通灵师，机械狼使用技能，猎人"],["房规","房规：没有房规"],["技能","狼队格式不限，可以自刀，可以自爆，可以吞警徽"],["技能","机械狼不一定第一晚学"],["技能","女巫第一晚可以不救"],["技能","通灵师必须上警，可以不跳，可以退水"],["技能","通灵师允许不报出真实的验人结果，比如报金水，把神报成平民，把平民报成狼人，把狼人报成平民或守卫，拉杆神职等操作"],["技能","以上所有好人和狼人阵营的操作风险由自己承担"],["技能","遵循狼刀在先原则，比如最后一神女巫和最后一狼机械女巫互毒算狼赢"]]},{"id":47,"name":"觉醒骑士","seats":12,"category":"网易官方","games":1,"note":"","cards":[["觉醒守卫",1,1],["村民",1,4],["预言家",1,1],["觉醒狼美人",2,1],["狼人",2,3],["女巫",1,1],["觉醒骑士",1,1]],"rules":[]},{"id":48,"name":"唯邻是从","seats":12,"category":"其他版型","games":1,"note":"傀儡板：狼人首夜杀死前指定与狼相邻的好人成为傀儡，傀儡自以为好人、技能全部失效/错乱，但被查验为狼、视为狼人边。","cards":[["猎人",1,1],["狼人",2,2],["村民",1,5],["女巫",1,1],["预言家",1,1],["守卫",1,1],["狼王",2,1]],"rules":[["阵营配置","狼人×2 狼王×1 预言家×1 女巫×1 猎人×1 守卫×1 平民×5（共 12 张）"],["核心机制","傀儡"],["傀儡·产生","狼人必须在首夜行使击杀技能前，共同商定选择一名与狼人座位相邻的好人成为傀儡"],["傀儡·自我认知","傀儡全程不知道自己已成为狼人阵营，仍按自己原有底牌的身份行动"],["傀儡时·查验","傀儡预言家：查验结果相反（狼人显示为好人，好人显示为狼人）"],["傀儡时·用药","傀儡女巫：可以使用解药/毒药，但实际不会生效"],["傀儡时·开枪","傀儡猎人：被刀或被放逐后不能开枪"],["傀儡时·守护","傀儡守卫：守护无效"],["傀儡·夜视","不知道狼人同伴，也不在狼人环节睁眼"],["傀儡·禁自爆","不能自爆"],["傀儡·禁刀","不能行使狼刀"],["傀儡·被查验","被预言家查验显示为狼人"],["傀儡·阵营归属","不占神/民边，视为狼人边（屠边结算时算在狼人阵营）"],["傀儡·记录方式","主身份仍按原底牌记录，最终阵营用 最终阵营 标为狼人阵营（2）"],["傀儡·禁刀补录","傀儡不能行使狼刀，所有狼队友全部出局后也不带刀"]]},{"id":49,"name":"永序之轮","seats":12,"category":"网易官方","games":1,"note":"","cards":[["狼人",2,3],["女巫",1,1],["村民",1,4],["守卫",1,1],["定序王子",1,1],["预言家",1,1],["蚀时狼妃",2,1]],"rules":[["特殊规则","神职：预言家+女巫+守卫+定序王子"],["特殊规则","平民：平民×4"],["特殊规则","普通狼人×3+蚀时狼妃"],["特殊规则","屠边，有警长"],["技能","定序王子：放逐投票后，定序王子可以翻牌，回到放逐投票前，本次放逐结果无效，并让定序王子单独进行一次发言与归票，随后重新进行放逐投票。一局只能使用一次技能。"],["技能","蚀时狼妃：入狼队，可自刀，可自曝。每晚可以封锁一名玩家，当晚好人对其使用的技能均视为对其自身释放。例如：预言家查验被狼妃封锁玩家视为查验自己，守卫守护被狼妃封锁玩家视为自守，女巫毒杀被狼妃封锁玩家视为毒自己。该技能一局只能生效一晚，随后狼妃失去技能。"],["技能","1.女巫解药不被狼妃弹"],["技能","2.同一晚多名神职对被狼妃封锁玩家释放技能则均被反弹回自身。"],["技能","3.狼妃第一晚使用技能在狼队集体行动前。此时狼妃尚不知道队友是哪些。"]]},{"id":50,"name":"双身份","seats":6,"category":"未收录清单","games":0,"note":"6人局，双身份：12 张牌每人抽 2 张，只用最上面那张的功能。判胜：所有「金宝宝」（两张都是平民）出局则狼人胜；所有狼人牌出局则好人胜。","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["村民",1,5],["复制人",1,1],["狼人",2,1],["潜行狼",2,1]],"rules":[["角色配置","共 12 张牌：预言家*1 女巫*1 猎人*1 守卫*1 平民*5 复制人*1 狼人*1 潜行狼*1。6 位玩家各抽 2 张。"],["阵营判定","两张牌中只要有 1 张狼人牌（狼人 / 潜行狼）即为狼人阵营；2 张都是好人牌则为好人阵营。"],["身份叠放","游戏开始前玩家向法官告知两张牌的叠放顺序，只能使用最上面那张牌的功能。"],["身份剥离","玩家夜间死亡或白天被放逐时，移去最上面的一张身份牌；两张都被移去时该玩家才真正出局。"],["技能作用层","所有技能只对最上面的牌生效：预言家查验只看对方最上面那张是否为好人，女巫毒药也只毒掉最上面那张。"],["复制人","将抽到的另一张牌复制一份（女巫+复制人→两张女巫；狼人+复制人→两张狼人）。"],["潜行狼","即使放在最下面，也能发动狼人刀人的功能（放在最上面时同普通狼人）。"],["胜利条件","好人胜：所有狼人牌出局（如 A=狼人+平民、B=平民+潜行狼，则扒掉 A 的头牌与 B 的两张牌即好人胜）。狼人胜：所有「金宝宝」（两张都是平民的玩家）出局。"],["特殊①","一名玩家两张都是狼人牌时，预言家无论查验哪一张都显示为好人。"],["特殊②","预言家不与狼牌同组，因此预言家一定是好人阵营。"],["特殊③","女巫全程不能自救。"],["发言时间","每个白天：顺序发言 3 分钟，自由发言 5 分钟。"]]},{"id":51,"name":"猎日逐光","seats":12,"category":"网易官方","games":1,"note":"12人局。神职：预言家1 女巫1 摄梦人1 流光伯爵1；狼人阵营：狼人3 + 蚀日侍女1（侍女知狼、狼不知她）；平民4。蚀日侍女吞人有流光反噬风险；小狼全死后侍女接刀。","cards":[["村民",1,4],["蚀日侍女",2,1],["女巫",1,1],["狼人",2,3],["流光伯爵",1,1],["摄梦人",1,1],["预言家",1,1]],"rules":[["角色配置","神职阵营：预言家*1 女巫*1 摄梦人*1 流光伯爵*1；狼人阵营：普通狼人*3 + 蚀日侍女*1；平民阵营：平民*4。共 12 张。"],["阵营配置","好人（神职+平民）8 人，狼人阵营 4 人（3 小狼 + 蚀日侍女）。"],["流光伯爵","好人神职。从第二晚起，每晚可庇护一名其他玩家免疫夜间伤害，不能连续两晚庇护同一人。庇护可防狼刀、女巫毒药和摄梦人伤害。"],["蚀日侍女·身份","狼人阵营。知道其他狼人身份，但其他狼人不知道她；夜间单独行动，不参与袭击，不能自爆。所有小狼死亡后，蚀日侍女接刀。"],["蚀日侍女·吞噬","从第二晚起可吞噬一名好人阵营玩家，获得其技能并在当晚使用，被吞噬者当夜失去技能。可多次吞噬同一玩家，但不能连续两晚吞噬同一玩家。"],["蚀日侍女·吞女巫","吞噬女巫获得女巫当前所有剩余的药；侍女消耗的药在还给女巫后不会复原。"],["蚀日侍女·吞摄梦人","获得摄梦人技能，可以梦游除自己以外的玩家。"],["蚀日侍女·吞预言家","获得查验技能。"],["蚀日侍女·吞流光伯爵","可以对除自己之外的玩家使用流光庇护。"],["特殊克制·流光反噬","若蚀日侍女吞噬流光伯爵本人、或吞噬被庇护的玩家，她会遭遇「流光反噬」出局；但当晚偷取的技能依旧可用。"]]},{"id":52,"name":"12人魅魔盗贼","seats":12,"category":"未收录清单","games":0,"note":"12人，盗贼局。判胜制：狼人屠边直接获胜；魅魔第三方屠城获胜。","cards":[["村民",1,5],["预言家",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["狼人",2,3],["魅魔",3,1],["盗贼",4,1]],"rules":[["角色配置","平民*5 预言家*1 女巫*1 猎人*1 守卫*1 狼人*3 魅魔*1 盗贼*1"],["判胜条件","判胜制：狼人屠边即可直接获胜；魅魔第三方屠城获胜。"],["盗贼","首夜从两张未发完的牌中选择一张作为自己身份，不占座位。"],["魅魔","属于第三方阵营，混迹在狼人中与狼人一起讨论战术刀杀玩家；首夜率先睁眼，自连一名好人阵营玩家组成第三方阵营，屠城获胜；不会殉情，会告知双方。"]]},{"id":53,"name":"觉醒隐狼10人","seats":10,"category":"未收录清单","games":0,"note":"构成：猎/魔镜少女/守/女巫+3民+2狼+觉醒隐狼。正文提到通灵师查验但名单无通灵师，以复盘名单为准","cards":[["猎人",1,1],["觉醒隐狼",2,1],["村民",1,3],["魔镜少女",1,1],["狼人",2,2],["守卫",1,1],["女巫",1,1]],"rules":[["角色配置","猎人×1、魔镜少女×1、守卫×1、女巫×1、村民×3、狼人×2、觉醒隐狼×1（共10张）"],["胜负","好人屠狼获胜（10-22 当局：狼人 6 自爆 + 2/8 出局后好人胜）"],["疑点","正文提到「通灵师查验2为狼人」但复盘名单里没有通灵师，且 2 号女巫救过人当晚仍死——源记录不完整，以复盘名单为准。"]]},{"id":54,"name":"神探伪装者","seats":12,"category":"暂停开放","games":1,"note":"","cards":[["狼人",2,3],["伪装者",2,1],["村民",1,4],["神探",1,1],["女巫",1,1],["守卫",1,1],["猎魔人",1,1]],"rules":[["角色配置","神职阵营：神探+女巫+守卫+猎魔人；狼人阵营：3狼+伪装者；平民阵营：4平民（共12张）"],["技能","神职阵营。拥有通灵师的能力。每局游戏限一次，可以使今晚的查验结果不会受任何干扰，且当晚对方如果正好被伪装，则不会触发特殊互动。"],["技能","狼人阵营。可以自爆，可以自刀，每晚参与狼队袭击后可以伪装一名玩家为另一个角色，他会被视为这个角色直到下个夜晚。连续两晚不能选择相同玩家和相同角色。"],["特殊互动","被伪装成猎魔人的玩家免疫毒药和狩猎；猎魔人狩猎被伪装成好人的玩家会出局。"]]},{"id":55,"name":"侦探伪装者2.0","seats":12,"category":"其他版型","games":2,"note":"","cards":[["村民",1,4],["女巫",1,1],["守卫",1,1],["伪装者",2,1],["猎魔人",1,1],["狼人",2,2],["变化者",2,1],["侦探",1,1]],"rules":[["角色配置","狼人阵营：2狼人+伪装者+变化者；好人阵营：4平民+侦探+女巫+守卫+猎魔人（共12张）；屠边"],["技能","狼人阵营。每晚可以伪装一名玩家成任何身份，当晚神职对该名玩家使用技能时视为对被伪装后的身份使用。不能连续两晚伪装同一名玩家，也不能连续两晚伪装同一个身份。"],["技能","狼人阵营。首夜法官从6张身份牌（狼美人/寻香魅影/梦魇/白狼王/血月使徒/毒师）中随机抽两张，变化者选一张作为自己的身份；梦魇/狼美人/寻香魅影首夜可发动技能。选寻香魅影可首夜得知一名狼人阵营玩家；选其余身份均不与狼队见面；选除白狼王/血月使徒外的身份时无法自爆。"],["技能","好人阵营。每晚查验一名玩家的具体身份；拥有一次放大镜（每局限一次），使用当晚查验结果必为真实身份，且神职对对方使用技能时可无视伪装者技能。"],["技能","狼人阵营。从第一晚开始恐惧，恐到平民投票无效；本版型仅公布出局情况，不公布票数。"]]},{"id":56,"name":"恶影蜂猎","seats":12,"category":"暂停开放","games":1,"note":"","cards":[["蜂之狂猎",1,1],["机械狼",2,1],["狼人",2,2],["女巫",1,1],["通灵师",1,1],["村民",1,4],["恶灵骑士",2,1],["守卫",1,1]],"rules":[["角色配置","好人神职：通灵师×1、女巫×1、蜂之狂猎×1、守卫×1；平民×4；狼人阵营：狼人×2、恶灵骑士×1、机械狼×1（共12张）；屠边"],["技能","好人神职。从第二晚开始，每晚选两名玩家使用蜂刺：两名都为好人→下一晚失去技能；两名都为狼人→这两名玩家出局；一好一狼→无事发生。"],["技能","狼人阵营。不可自爆，免疫夜间伤害，一次性反伤：成为通灵师查验目标→通灵师当晚死亡；成为女巫毒药目标→女巫当晚死亡；同时被查验和被毒→通灵师出局、女巫不出局。"],["技能","可学习其他角色技能。学恶灵骑士=免疫夜间伤害+一次反伤（不获得双刀）；学女巫的机械狼毒有反伤的恶灵骑士→机械狼出局；学蜂之狂猎=技能效果相同；蜂刺选中学习好人的机械狼→机械狼视为狼人判定。"],["判定","通灵师查验有反伤的恶灵骑士→通灵师出局；女巫毒被机械守卫守护的玩家→女巫死亡、被守护者不死；反伤触发顺序：预言家＞女巫，机械技能＞原生技能。"]]},{"id":57,"name":"盗宝大师2.0","seats":12,"category":"其他版型","games":2,"note":"","cards":[["村民",1,4],["通灵师",1,1],["狼王",2,1],["摄梦人",1,1],["毒师",1,1],["狼人",2,2],["盗宝",2,1],["猎人",1,1]],"rules":[["角色配置","好人神职：通灵师×1、毒师×1、猎人×1、摄梦人×1；平民×4；狼人阵营：狼王×1、狼人×2、盗宝大师×1（共12张）"],["技能","狼人阵营。一定在场。首夜得知1狼1神1民；每晚选择神/民的身份进行切换；与狼人不见面，只能在所有狼人死亡后刀人。"],["技能","好人神职。拥有一瓶毒药。"],["判定","盗宝摄梦人隔夜可以双扎扎死人；盗宝蒙面作为最后一狼时，切蒙面当天被放逐、夜晚砍一刀后结算；狼人第一晚不能开刀。"]]},{"id":58,"name":"觉醒石像鬼10人","seats":10,"category":"10人版型","games":1,"note":"10人局：预/女/守/守墓人+4民+狼+觉醒石像鬼","cards":[["预言家",1,1],["女巫",1,1],["守卫",1,1],["守墓人",1,1],["村民",1,4],["狼人",2,1],["觉醒石像鬼",2,1]],"rules":[["角色配置","神职：预言家×1、女巫×1、守卫×1、守墓人×1；平民×4；狼人阵营：狼人×1、觉醒石像鬼×1（共10张）"],["全局","女巫不能自救，单爆吞警徽。"]]},{"id":59,"name":"连环之影","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["狼人",2,2],["寻香魅影",2,1],["黑暗镜",2,1],["觉醒预言家",1,1],["女巫",1,1],["摄梦人",1,1],["光明镜",1,1],["村民",1,4]],"rules":[["角色配置","狼队：2狼人、1寻香魅影、1黑暗镜；神职：觉醒预言家、女巫、摄梦人、光明镜；民边：4平民（共12张）"],["技能","从第二晚开始，每晚可以选择两名玩家，其他身份对其中一名玩家使用的技能视为同样对另一名玩家使用。每名玩家每局只能被选择一次。"],["技能","同黑暗镜：从第二晚开始，每晚选择两名玩家建立镜像，技能联动。每名玩家每局只能被选择一次。"],["隐匿","若自己使用技能，则自身今晚免疫除【无限镜像】以外的伤害。"],["无限镜像","若当晚黑暗镜与光明镜选择的两名玩家相同，这两名玩家出局，且不受任何保护效果且不能发动任何出局技能。"],["判定1","女巫只能看到狼人的原始刀口，且女巫拯救的是「袭击」这个行动。"],["判定2","寻香魅影本版型看不到任何队友，且寻香魅影的「连接」的人数可能有变动。"],["判定3","觉醒预言家的查验中只要存在狼人，查验结果为「疑似狼人」。"],["判定4","「梦游出局」只统计连续被「梦游」的玩家，与摄梦人的行动无关联。"],["其他","黑暗镜与狼队不见面；狼美人作为最后一个狼人出局不可发动技能。"]]},{"id":60,"name":"魂归来兮","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["狼人",2,3],["狼妖",2,1],["预言家",1,1],["女巫",1,1],["猎人",1,1],["摄梦人",1,1],["村民",1,3],["暗恋者",1,1]],"rules":[["角色配置","狼队：3狼人、1狼妖；神职：预言家、女巫、猎人、摄梦人；民边：3平民、暗恋者（共12张）"],["技能","不入狼队，狼队知晓你的位置，狼人全部出局后接刀。每晚可以选择一名玩家，若这名玩家当晚出局，则改为你出局，这名玩家失去原有技能，成为一名狼王并在下一晚进入狼队。不能连续两晚选择同一名玩家。若你选择了自己且你在当晚出局，你不死且变为狼王。"],["特殊判定","若暗恋者被狼妖转化，则暗恋者变为狼美人，其未进入狼队时的魅惑目标为暗恋对象。（本版型狼美人作为最后一狼魅惑仍然生效）"],["hint1","被狼妖转化的玩家立刻进入狼队，狼人们下一晚才会得知被转化玩家的位置。"],["hint2","若狼妖作为最后一狼成功替死，游戏不会结束，被转化玩家进入狼队。"],["hint3","目标被狼妖转化的夜晚不知道自己被转化，天亮时会收到提示。"],["hint4","若被转化玩家当晚同时因多个原因而死亡（如同刀同毒），转化仍然成功，被转化者仍然存活。"]]},{"id":61,"name":"杯酒入梦","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["狼人",2,3],["幻术师",2,1],["预言家",1,1],["女巫",1,1],["猎魔人",1,1],["摄梦人",1,1],["村民",1,4]],"rules":[["角色配置","狼队：3狼人、1幻术师；神队：预言家、女巫、猎魔人、摄梦人；民边：4平民（共12张）"],["技能","技能同摄梦人，首夜发动技能后进入狼队。"],["判定1","若幻术师与摄梦人在同一晚指定同一名玩家，双方技能失效。"],["判定2","若幻术师与摄梦人在连续两晚指定同一名玩家，这名玩家梦游出局。"]]},{"id":62,"name":"狼美人河豚","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["狼人",2,3],["狼美人",2,1],["预言家",1,1],["女巫",1,1],["河豚",1,1],["守卫",1,1],["村民",1,4]],"rules":[["角色配置","狼队：3狼人、1狼美人；神职：预言家、女巫、河豚、守卫；民边：4平民（共12张）"],["河豚·判定","河豚发动技能后若好人与狼人同时满足胜利条件，狼人胜利。"],["狼美人·判定","狼美人采用强美判定。"]]},{"id":63,"name":"间谍殉道者","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["狼人",2,3],["间谍",2,1],["预言家",1,1],["女巫",1,1],["猎人",1,1],["殉道者",1,1],["村民",1,4]],"rules":[["角色配置","狼队：3狼人、1间谍；神队：预言家、女巫、猎人、殉道者；民边：4平民（共12张）"],["技能","不与狼队见面，不可自爆，狼队全部出局后带刀。每晚可以跟踪一名玩家，下一晚你会得知其身份与行动目标。你可以自杀以杀死跟踪目标，执刀狼队会得知被你杀死的玩家的身份（无论间谍与目标是否死亡）。"],["技能","每天天亮前提前观看死讯。你可以以死亡为代价换取一名玩家复活。若你死亡，则你不能发动技能。"]]},{"id":64,"name":"异怪狂响","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["通灵师",1,1],["女巫",1,1],["守卫",1,1],["剧作家",1,1],["村民",1,4],["狼人",2,3],["异怪王子",2,1]],"rules":[]},{"id":65,"name":"暗恋者影子复仇者","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["女巫",1,1],["守卫",1,1],["村民",1,3],["狼人",2,3],["影子",1,1],["复仇者",4,1],["暗恋者",1,1]],"rules":[]},{"id":66,"name":"孤注一掷","seats":12,"category":"其他版型","games":2,"note":"","cards":[["预言家",1,1],["女巫",1,1],["摄梦人",1,1],["猎人",1,1],["村民",1,4],["典狱长",2,1],["狼人",2,3]],"rules":[]},{"id":67,"name":"无目之城","seats":12,"category":"网易官方","games":1,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎魔人",1,1],["流光伯爵",1,1],["村民",1,4],["狼人",2,1],["狼鸦之爪",2,1],["蚀日侍女",2,1],["寂夜导师",2,1]],"rules":[]},{"id":68,"name":"天眼祈求者","seats":12,"category":"其他版型","games":1,"note":"","cards":[["天眼",1,1],["女巫",1,1],["猎人",1,1],["祈求者",4,1],["村民",1,4],["恶魔",2,1],["狼人",2,3]],"rules":[]},{"id":69,"name":"风声谍影（12人）","seats":12,"category":"网易官方","games":1,"note":"","cards":[["预言家",1,1],["魔镜少女",1,1],["熊",1,1],["女巫",1,1],["猎人",1,1],["河豚",1,1],["摄梦人",1,1],["白猫",1,1],["觉醒石像鬼",2,2],["觉醒隐狼",2,1],["孤独少女",4,1]],"rules":[]},{"id":70,"name":"盗宝大师II","seats":12,"category":"未收录清单","games":0,"note":"12人盗宝大师II：通灵师/毒师/摄梦人/蒙面人/4民/狼王/2狼/盗宝；以复盘名单为准，无猎人槽","cards":[["通灵师",1,1],["毒师",1,1],["摄梦人",1,1],["蒙面人",1,1],["村民",1,4],["狼王",2,1],["狼人",2,2],["盗宝",2,1]],"rules":[]},{"id":71,"name":"12人魔幻对决","seats":12,"category":"未收录清单","games":0,"note":"12人魔幻对决：狼术师+3狼 / 预言家+女巫+猎人+魔术师 / 4村民；狼术师与魔术师交换号码牌，技能效果随号码转移","cards":[["狼术师",2,1],["狼人",2,3],["预言家",1,1],["女巫",1,1],["猎人",1,1],["魔术师",1,1],["村民",1,4]],"rules":[["角色配置","狼人阵营：狼术师×1 狼人×3；神职阵营：预言家×1 女巫×1 猎人×1 魔术师×1；平民阵营：村民×4（共 12 张）"],["技能","狼术师：可以自刀，可以自爆，每夜在魔术师后睁眼，选择更换两名玩家的号码牌，每个玩家的号码牌只能被狼术师更换一次；随后与狼人共同行动"],["技能","魔术师：选择更换两名玩家的号码牌，每个玩家的号码牌只能被魔术师更换一次"],["换号·含义","更换号码牌即被更换的两名玩家号码被交换，原作用于该号玩家身上的技能效果随号码转变到新玩家身上。如1号（狼人）与2号（平民）的号码牌被更换，预言家查验1号实际查验到2号的身份（即金水），女巫毒杀1号实际2号被毒杀出局"],["换号·女巫","女巫解药存在时，看到的刀口不受更换号码牌影响：女巫会看到狼人真实意图击杀的号码；使用解药亦解救该击杀事件，不会因换号而无法自救。但狼人击杀的是女巫时，即使当夜女巫被更换，同样无法使用解药"],["换号·结算顺序","魔术师与狼术师同时更换同一个或同两个号码牌时，按魔术师先行动、狼术师后行动的顺序结算。例如魔术师更换1、2，狼术师更换2、3，实际过程为1、2的号码牌先被魔术师更换，随后1、3的号码牌被狼术师更换，此时夜间座次与号码的对应关系变为2、3、1、4……12"]]},{"id":72,"name":"纯白之女（10人）","seats":10,"category":"10人版型","games":1,"note":"","cards":[["纯白之女",1,1],["女巫",1,1],["守卫",1,1],["村民",1,4],["狼巫",2,1],["狼人",2,2]],"rules":[]},{"id":73,"name":"千年之恋","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎人",1,1],["流光伯爵",1,1],["村民",1,3],["蚀日侍女",2,1],["狼人",2,2],["白蛇预言家",3,1],["许仙寻香魅影",3,1]],"rules":[["特殊规则","预言家+女巫+猎人+流光伯爵"],["特殊规则","蚀日侍女+两普通狼人"],["特殊规则","白蛇预言家+许仙寻香魅影"],["技能","白蛇预言家：第三方阵营，每晚可以查验一名玩家是否为许仙。验出许仙或许仙死亡，白蛇每晚可以刀人。"],["技能","许仙寻香魅影：第三方阵营，每晚可以绑定两名玩家，直到第二天白天结束，如果一方出局则另一方殉情。连续两晚不能绑定相同玩家。殉情触发后永久失去绑定能力。狼人全部死亡后许仙接刀。许仙和白蛇的刀互相独立。"],["技能","预言家查验第三方显示狼人"],["技能","侍女偷白蛇技能验出许仙不会导致白蛇解锁技能"],["技能","侍女偷许仙技能绑定许仙和白蛇，当触发殉情时可以触发第三方特殊获胜"],["技能","好人使所有狼人与第三方出局获胜；狼人屠边且杀死第三方获胜；第三方屠城获胜，或者白蛇与许仙被绑定且触发殉情时第三方特殊获胜。"],["技能","流光伯爵（好人神职）：从第二晚起，每晚可庇护一名其他玩家免疫夜间伤害，但不能连续两晚庇护同一人。庇护可防狼刀、女巫毒药和摄梦人伤害。"],["技能","蚀日侍女（狼人阵营）：知道其他狼人身份，但其他狼人不知道她；夜间单独行动，不参与袭击，不能自爆。从第二晚起，可吞噬一名好人阵营玩家，获得其技能并在当晚使用，被吞噬者当夜失去技能。"],["技能","特殊克制：若蚀日侍女吞噬流光伯爵本人或被庇护的玩家，她会遭遇“流光反噬”直接出局。"]]},{"id":74,"name":"胡夫地平线","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["炼金魔女",1,1],["猎人",1,1],["摄梦人",1,1],["村民",1,4],["阿努比斯",2,1],["狼人",2,3]],"rules":[["角色配置","神职阵营：预言家、炼金魔女、猎人、摄梦人"],["角色配置","平民阵营：普通村民4"],["角色配置","狼人阵营：阿努比斯1普通狼人3"],["特殊规则","从第二晚开始，阿努比斯每晚可选择一名已出局玩家置于天平左侧，一名未出局玩家置于天平右侧（每个玩家只能上天平一次）。不同身份的“重量”不同，通常遵循 神职 > 平民 > 狼人 > 神职 的克制关系。根据天平倾斜方向决定结果。若左侧（已出局玩家）重于右侧，则右侧玩家出局；若左侧轻于右侧，则阿努比斯自己出局；否则无事发生。阿努比斯夜晚不与狼人见面，且当其他狼人全部出局后，阿努比斯才会开始带刀。不可自爆。"]]},{"id":75,"name":"灯影预言家","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["女巫",1,1],["守卫",1,1],["骑士",1,1],["狼王",2,1],["狼人",2,3],["灯影预言家",1,1],["村民",1,3]],"rules":[["角色配置","神职阵营：预言家，女巫，守卫，骑士"],["角色配置","狼人阵营：狼王，3狼人"],["角色配置","平民阵营：灯影预言家，3平民"]]},{"id":76,"name":"纯白夜影","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["纯白之女",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["村民",1,4],["狼人",2,3],["狼巫",2,1]],"rules":[["胜利条件","暗牌，屠边局"],["角色配置","好人阵营 (8人)：4平民、纯白之女、女巫、猎人、守卫。"],["角色配置","狼人阵营 (4人)：3普通狼人、狼巫。"],["技能","查验：每晚最先行动，可查验一名玩家的具体身份。"],["技能","验杀：从第二夜起，若查验到狼人（包括狼巫），该狼人立即出局。此出局无法被女巫解药救活，且可无视守卫的守护。"],["行动顺序","行动顺序：在狼人刀人之后行动。"],["技能","查验：每晚可查验一名非狼人阵营玩家的具体身份。"],["技能","验杀：从第二夜起，若查验到纯白之女，则纯白之女立即出局。同样无法被女巫救活，且可无视守卫。"],["房规","私货商人：狼人禁止双爆，纯白允许不上警"]]},{"id":77,"name":"血月猎魔人","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["预言家",1,1],["女巫",1,1],["猎魔人",1,1],["白神",1,1],["血月使徒",2,1],["狼人",2,3],["村民",1,4]],"rules":[["角色配置","神职阵营：预言家，女巫，猎魔人，白神"],["角色配置","狼人阵营：血月使徒，3狼人"],["角色配置","平民阵营：4平民"],["技能","猎魔人：从第二晚起，每晚可选择 1 人狩猎，可以空过不发动，猎到狼人的话，狼人死亡，猎到好人的话猎魔人自己死亡，猎魔人免疫女巫毒药"],["技能","血月使徒：狼人阵营，与小狼见面"],["技能","技能1：自爆：白天翻牌自爆，当夜所有神职技能全部封印（预言家不能验、女巫不能开药、猎魔人不能狩猎）。自爆当晚狼队依旧可以刀人。"],["技能","技能2：如果血月使徒是场上最后一只被放逐的狼人，不会立刻出局，存活到下一个白天之后才死亡（狼队可以多一刀机会）"],["技能","白神被投需要追刀才算彻底死亡"]]},{"id":78,"name":"12人阴阳师","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["阴阳师",1,1],["女巫",1,1],["守卫",1,1],["小精灵",1,1],["村民",1,4],["恶灵",2,1],["狼人",2,3]],"rules":[["角色配置","阴阳师×1 女巫×1 守卫×1 小精灵×1 村民×4 恶灵×1 狼人×3（共 12 张）"],["技能","阴阳师：好人神职。每晚查验一名玩家当晚是否行动过，此外拥有守墓人的功能"],["技能","阴阳师：连续两晚查验恶灵将验杀恶灵"],["技能","小精灵：好人神职。从第二晚开始，每晚必须附身一名玩家"],["技能","小精灵：若附身对象不是好人阵营，小精灵猝死；若对方当夜死亡，小精灵殉情"],["技能","小精灵：若都没有发生，则小精灵无敌"],["技能","恶灵：狼人阵营，不能自爆，开局不入狼队，大小狼不见面"],["技能","恶灵：所有小狼死亡后接刀"],["技能","恶灵：每晚可以催眠一名玩家，对方无法使用技能（小狼及阴阳师）或技能无效（女巫、守卫、小精灵），不能连催"],["查验","阴阳师查验使用了技能但被催眠的女巫、守卫、小精灵，显示无行动"]]},{"id":79,"name":"12人火力全开","seats":12,"category":"未收录清单","games":0,"note":"","cards":[["狼王",2,1],["狼美人",2,1],["恶魔",2,1],["隐狼",2,1],["狐狸",1,1],["女巫",1,1],["猎人",1,1],["守卫",1,1],["白痴",1,1],["村民",1,2],["长老",1,1]],"rules":[["角色配置","狼队：狼王×1 狼美人×1 恶魔×1 隐狼×1；神职：狐狸×1 女巫×1 猎人×1 守卫×1 白痴×1；民边：村民×2 长老×1（共 12 张）"],["胜利条件","12人屠边，双爆吞警徽"],["技能","恶魔：可自爆自刀，与狼队共同行动；狼刀结束后可以查验一名玩家为民边/神边"],["技能","狐狸：每晚可以查验三名连座玩家中是否存在狼人；若不存在，失去技能"],["技能","长老：首次被狼刀不会死亡"],["FAQ","恶魔查验隐狼结果为民边"],["FAQ","隐狼被狐狸判定为好人"]]}]};
+</script>
+<script>
+(function(){
+'use strict';
+const D = window.TIMER_DATA;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const LS = 'ww_judge_timer_v1';
+const STAGES = [
+  {k:'shangjing', n:'警上发言', d:120},
+  {k:'jingxia',   n:'警下发言', d:120},
+  {k:'fangzhu',   n:'放逐发言', d:120},
+  {k:'pk',        n:'PK 发言',  d:60},
+  {k:'yiyan',     n:'遗言',     d:60},
+  {k:'free',      n:'自由发言', d:120},
+];
+const TIP_RE = /发言|警徽|警长|退水|遗言|自爆|吞警|屠边|屠城|投票|放逐|秒|分钟|顺序|竞选|PK|白天|夜晚|平安夜|技能失效|守护|查验/;
+const RING = 2 * Math.PI * 100;
+
+function defaults(){
+  const durations = {}; STAGES.forEach(s => durations[s.k] = s.d);
+  const first = D.boards.find(b => /预女猎白/.test(b.name)) || D.boards.find(b => b.seats === 12) || D.boards[0];
+  return {boardId:first.id, stage:'jingxia', durations, seat:1, names:{}, alive:{}, spoken:{}, used:{},
+          day:1, part:'白天', theme:'dark', muted:false, vibrate:true, autoReset:true, recent:[]};
+}
+function load(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(LS) || '{}');
+    const d = defaults();
+    const s = Object.assign(d, raw);
+    s.durations = Object.assign(d.durations, raw.durations || {});
+    ['names','alive','spoken','used'].forEach(k => s[k] = Object.assign({}, raw[k] || {}));
+    if(!D.boards.some(b => b.id === s.boardId)) s.boardId = d.boardId;
+    if(!STAGES.some(x => x.k === s.stage)) s.stage = 'jingxia';
+    return s;
+  }catch(e){ return defaults(); }
+}
+const S = load();
+let remaining = S.durations[S.stage];
+let running = false, endAt = 0, timedOut = false;
+let boardFilter = {q:'', seats:0};
+let audioCtx = null;
+
+function save(){
+  try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){}
+}
+function board(){ return D.boards.find(b => b.id === S.boardId) || D.boards[0]; }
+function stage(){ return STAGES.find(s => s.k === S.stage) || STAGES[1]; }
+function duration(){ return Math.max(5, Number(S.durations[S.stage]) || 120); }
+function isAlive(n){ return S.alive[n] !== false; }
+function seatName(n){ return (S.names[n] || '').trim(); }
+function fmt(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  return (h ? h + ':' + String(m).padStart(2,'0') : String(m).padStart(2,'0')) + ':' + String(s).padStart(2,'0');
+}
+function fmtUsed(sec){
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+}
+
+/* ---------------- 计时 ---------------- */
+function renderTime(){
+  const dur = duration();
+  $('#timeText').textContent = fmt(remaining);
+  const ratio = Math.max(0, Math.min(1, remaining / dur));
+  $('#ringFg').style.strokeDashoffset = String(RING * (1 - ratio));
+  const card = $('#clockCard');
+  card.classList.toggle('running', running);
+  card.classList.toggle('timeout', timedOut);
+  $('#stateText').textContent = timedOut ? '时间到' : (running ? '计时中' : (remaining < dur ? '已暂停' : '准备'));
+  const st = stage().n, sp = S.seat + ' 号' + (seatName(S.seat) ? ' · ' + seatName(S.seat) : '');
+  document.title = timedOut ? '⏰ 时间到 · ' + sp : (running ? fmt(remaining) + ' · ' + sp : '法官计时器 · 狼人杀');
+}
+function tick(){
+  if(!running) return;
+  remaining = Math.max(0, (endAt - Date.now()) / 1000);
+  if(remaining <= 0){ remaining = 0; running = false; onTimeout(); return; }
+  renderTime();
+}
+setInterval(tick, 100);
+function start(){
+  if(timedOut) reset();
+  if(remaining <= 0) remaining = duration();
+  endAt = Date.now() + remaining * 1000;
+  running = true; timedOut = false;
+  renderTime();
+}
+function pause(){
+  if(!running) return;
+  remaining = Math.max(0, (endAt - Date.now()) / 1000);
+  running = false; renderTime();
+}
+function toggle(){ running ? pause() : start(); }
+function reset(){
+  running = false; timedOut = false; remaining = duration();
+  renderTime(); renderSeatState();
+}
+function addTime(delta){
+  remaining = Math.max(0, remaining + delta);
+  if(running) endAt += delta * 1000;
+  if(remaining > 0 && timedOut){ timedOut = false; }
+  renderTime();
+}
+function onTimeout(){
+  timedOut = true;
+  beep();
+  if(S.vibrate && navigator.vibrate) navigator.vibrate([180,90,180,90,300]);
+  renderTime();
+}
+function beep(){
+  if(S.muted) return;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!audioCtx) audioCtx = new AC();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    for(let i=0;i<3;i++){
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = i === 2 ? 660 : 880;
+      const t = audioCtx.currentTime + i * 0.32;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + 0.28);
+    }
+  }catch(e){}
+}
+function usedAdd(){
+  const spent = duration() - remaining;
+  if(spent > 0.4) S.used[S.seat] = (Number(S.used[S.seat]) || 0) + spent;
+  S.spoken[S.seat] = true;
+  save();
+}
+function selectSeat(n, resetTimer){
+  if(n < 1 || n > board().seats) return;
+  if(n !== S.seat) usedAdd();
+  S.seat = n;
+  if(resetTimer !== false && S.autoReset) reset();
+  save(); renderSeatState(); renderSpeaker(); renderTime();
+}
+function nextSeat(dir){
+  const n = board().seats;
+  let i = S.seat;
+  for(let k=0;k<n;k++){
+    i = ((i - 1 + dir + n) % n) + 1;
+    if(isAlive(i)){ selectSeat(i); return i; }
+  }
+  return S.seat;
+}
+function setStage(k){
+  if(!STAGES.some(s => s.k === k)) return;
+  usedAdd();
+  S.stage = k; remaining = duration(); running = false; timedOut = false;
+  S.spoken = {};
+  save(); renderAll();
+}
+function setDuration(v){
+  v = Math.max(5, Math.min(3600, Number(v) || 120));
+  S.durations[S.stage] = v;
+  remaining = v; running = false; timedOut = false;
+  save(); renderAll();
+}
+function applyBoard(id, keep){
+  const b = D.boards.find(x => x.id === id);
+  if(!b) return;
+  const oldSeats = board().seats;
+  S.boardId = id;
+  if(!keep || b.seats !== oldSeats){
+    ['names','alive','spoken','used'].forEach(k => {
+      const o = {};
+      Object.keys(S[k]).forEach(n => { if(Number(n) <= b.seats) o[n] = S[k][n]; });
+      S[k] = o;
+    });
+  }
+  S.seat = 1; remaining = duration(); running = false; timedOut = false;
+  S.recent = [id].concat((S.recent || []).filter(x => x !== id)).slice(0, 5);
+  save(); renderAll();
+}
+
+/* ---------------- 渲染 ---------------- */
+function renderStageBar(){
+  $('#stageBar').innerHTML = STAGES.map(s =>
+    '<button data-stage="'+s.k+'" class="'+(s.k===S.stage?'active':'')+'">'+s.n+'</button>').join('');
+}
+function renderSpeaker(){
+  const n = S.seat, nm = seatName(n);
+  $('#speakerName').innerHTML = n + ' 号' + (nm ? ' · ' + escapeHtml(nm) : '') +
+    '<small>' + stage().n + ' · 第 ' + S.day + ' 天' + S.part + '</small>';
+  $('#stageLabel').innerHTML = '阶段：<b>' + stage().n + '</b>';
+  $('#dayLabel').textContent = '第 ' + S.day + ' 天 · ' + (S.part==='白天'?'☀ 白天':'🌙 夜晚');
+  $('#dayText').textContent = '第 ' + S.day + ' 天 · ' + (S.part==='白天'?'☀ 白天':'🌙 夜晚');
+  const used = Number(S.used[n]) || 0;
+  $('#usedNote').textContent = '本局累计发言 ' + fmtUsed(used) + ' ｜ 本阶段 ' + duration() + ' 秒 ｜ ' + board().name;
+}
+function renderBoardInfo(){
+  const b = board();
+  $('#boardBtnName').textContent = b.name;
+  $('#boardTag').textContent = b.seats + ' 人 · ' + b.cards.length + ' 类身份';
+  const groups = {1:[],2:[],3:[],4:[]};
+  b.cards.forEach(c => (groups[c[1]] || (groups[c[1]] = [])).push(c));
+  const label = {1:'好人',2:'狼人',3:'第三方',4:'变动'};
+  let html = '<div class="frow"><span>座位数 / 身份牌</span><b>' + b.seats + ' 人 / ' + b.cards.reduce((s,c)=>s+c[2],0) + ' 张</b></div>' +
+             '<div class="frow"><span>分类 / 场次</span><b>' + escapeHtml(b.category || '未收录清单') + ' · ' + (b.games || 0) + ' 场</b></div>';
+  Object.keys(label).forEach(f => {
+    if(!groups[f] || !groups[f].length) return;
+    html += '<div style="margin-top:8px;font-size:12px;color:var(--muted)">' + label[f] + '阵营</div><div class="chips">' +
+      groups[f].map(c => '<span class="chip2 f'+f+'">' + escapeHtml(c[0]) + (c[2]>1?' ×'+c[2]:'') + '</span>').join('') + '</div>';
+  });
+  if(b.note) html += '<div class="boardnote">' + escapeHtml(b.note) + '</div>';
+  $('#boardInfoBody').innerHTML = html;
+  $('#genText').textContent = '版型快照 ' + D.generated + ' · ' + D.boards.length + ' 板 / ' + D.rules + ' 条规则';
+}
+function renderTips(){
+  const b = board();
+  const hits = b.rules.filter(r => TIP_RE.test(r[0] + ' ' + r[1])).slice(0, 8);
+  $('#tipsTag').textContent = b.rules.length + ' 条规则';
+  const flow = '<li><span class="tk">通用流程</span>警长竞选 → 警上发言 → 退水 → 警下发言 → '
+    + '放逐发言 → 投票 → 遗言 → 入夜；双爆吞警徽、屠边等特殊胜负与发言限制以本板规则为准。</li>';
+  $('#tipList').innerHTML = (hits.length
+    ? hits.map(r => '<li><span class="tk">' + escapeHtml(r[0]) + '</span>' + escapeHtml(r[1]) + '</li>').join('')
+    : '<li class="empty">该板暂无发言 / 警徽 / 遗言相关的特殊规则，按常规流程执行即可。</li>') + flow;
+}
+function renderSeats(){
+  const n = board().seats;
+  $('#seatsTag').textContent = n + ' 座 · ' + Object.keys(S.alive).filter(x => S.alive[x] === false).length + ' 人出局';
+  $('#seatGrid').innerHTML = Array.from({length:n}, (_,i) => {
+    const k = i + 1, nm = seatName(k), used = Number(S.used[k]) || 0;
+    return '<div class="seat" data-seat="'+k+'">' +
+      '<button class="dot" data-dot="'+k+'" title="标记出局 / 复活"></button>' +
+      (S.spoken[k] ? '<span class="spoken">✓</span>' : '') +
+      '<div class="sno">'+k+' 号</div>' +
+      '<input class="sname" data-name="'+k+'" value="'+escapeAttr(nm)+'" placeholder="玩家名" maxlength="12">' +
+      '<div class="sused">'+(used ? '累计 '+fmtUsed(used) : '—')+'</div></div>';
+  }).join('');
+  renderSeatState();
+}
+function renderSeatState(){
+  $$('.seat').forEach(el => {
+    const n = Number(el.dataset.seat);
+    el.classList.toggle('sel', n === S.seat);
+    el.classList.toggle('dead', !isAlive(n));
+  });
+}
+function renderTheme(){
+  document.documentElement.dataset.theme = S.theme;
+  const meta = document.querySelector('meta[name=theme-color]');
+  if(meta) meta.setAttribute('content', S.theme === 'light' ? '#f2f5fa' : '#0d1117');
+  $('#themeBtn').textContent = S.theme === 'light' ? '🌞' : '🌗';
+  $('#muteBtn').textContent = S.muted ? '🔇' : '🔊';
+  $('#muteBtn').classList.toggle('on', S.muted);
+}
+function renderAll(){
+  renderStageBar(); renderBoardInfo(); renderTips(); renderSeats();
+  renderSpeaker(); renderTheme(); renderTime();
+  $('#durInput').value = duration();
+}
+function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ---------------- 版型选择 ---------------- */
+function renderFilters(){
+  const sizes = [...new Set(D.boards.map(b => b.seats))].sort((a,b)=>a-b);
+  $('#seatFilter').innerHTML = [0].concat(sizes).map(s =>
+    '<button data-seats="'+s+'" class="'+(boardFilter.seats===s?'on':'')+'">'+(s?s+' 人':'全部人数')+'</button>').join('');
+}
+function renderBoardList(){
+  const q = boardFilter.q.trim().toLowerCase();
+  let list = D.boards.filter(b => {
+    if(boardFilter.seats && b.seats !== boardFilter.seats) return false;
+    if(!q) return true;
+    return (b.name + ' ' + b.category + ' ' + b.cards.map(c=>c[0]).join(' ') + ' ' + (b.note||'')).toLowerCase().includes(q);
+  });
+  const recent = (S.recent || []).map(id => D.boards.find(b => b.id === id)).filter(Boolean);
+  if(!q && !boardFilter.seats && recent.length){
+    const rset = new Set(recent.map(b => b.id));
+    list = recent.concat(list.filter(b => !rset.has(b.id)));
+  }
+  $('#boardCountText').textContent = '共 ' + list.length + ' / ' + D.boards.length + ' 个版型';
+  $('#boardList').innerHTML = list.slice(0, 200).map(b =>
+    '<button class="bitem '+(b.id===S.boardId?'cur':'')+'" data-board="'+b.id+'">' +
+      '<div style="min-width:0"><div class="bn">' + escapeHtml(b.name) + '</div>' +
+      '<div class="bs">' + b.cards.map(c => c[0] + (c[2]>1?'×'+c[2]:'')).join(' / ') + '</div></div>' +
+      '<div class="bmeta">' + b.seats + ' 人<br>' + b.rules.length + ' 条规则</div></button>').join('') ||
+    '<div class="empty">没有匹配的版型，换个关键词试试。</div>';
+}
+function openBoards(){
+  boardFilter.q = ''; $('#boardSearch').value = '';
+  renderFilters(); renderBoardList();
+  $('#boardModal').classList.remove('hidden');
+  setTimeout(() => $('#boardSearch').focus(), 30);
+}
+function closeModals(){ $$('.modal').forEach(m => m.classList.add('hidden')); }
+
+/* ---------------- 设置 ---------------- */
+function renderSettings(){
+  const rows = STAGES.map(s =>
+    '<div class="setrow"><div class="lbl"><b>'+s.n+'</b><small>该阶段默认时长（秒）</small></div>' +
+    '<input type="number" data-dur-stage="'+s.k+'" min="5" max="3600" step="5" value="'+S.durations[s.k]+'"></div>').join('');
+  const sw = (k, title, sub) => '<div class="setrow"><div class="lbl"><b>'+title+'</b><small>'+sub+'</small></div>' +
+    '<button class="switch '+(S[k]?'on':'')+'" data-switch="'+k+'"></button></div>';
+  $('#settingsBody').innerHTML = rows +
+    sw('muted','静音','到时只闪烁，不播放提示音') +
+    sw('vibrate','震动提醒','手机支持时到时震动') +
+    sw('autoReset','切换发言人自动重置','关闭后计时会连续累计') +
+    '<div class="setrow"><div class="lbl"><b>本局数据</b><small>名字、出局、已发言、累计用时保存在本机浏览器</small></div>' +
+    '<button class="btn" id="clearInline">清空</button></div>';
+  $('#settingsModal').classList.remove('hidden');
+}
+function clearGame(){
+  if(!confirm('清空本局的座位名字、出局标记和累计用时？（版型与时长设置保留）')) return;
+  S.names = {}; S.alive = {}; S.spoken = {}; S.used = {}; S.seat = 1; S.day = 1; S.part = '白天';
+  reset(); save(); renderAll();
+}
+function toggleTheme(){ S.theme = S.theme === 'light' ? 'dark' : 'light'; save(); renderTheme(); }
+function toggleMute(){ S.muted = !S.muted; save(); renderTheme(); }
+function toggleFs(){
+  if(document.fullscreenElement) document.exitFullscreen();
+  else (document.documentElement.requestFullscreen || function(){}).call(document.documentElement);
+}
+
+/* ---------------- 事件 ---------------- */
+$('#startBtn').onclick = toggle;
+$('#resetBtn').onclick = reset;
+$('#plusBtn').onclick = () => addTime(10);
+$('#minusBtn').onclick = () => addTime(-10);
+$('#prevBtn').onclick = () => nextSeat(-1);
+$('#nextBtn').onclick = () => nextSeat(1);
+$('#durInput').onchange = e => setDuration(e.target.value);
+$$('.chip[data-dur]').forEach(b => b.onclick = () => setDuration(b.dataset.dur));
+$('#stageBar').onclick = e => { const b = e.target.closest('[data-stage]'); if(b) setStage(b.dataset.stage); };
+$('#boardBtn').onclick = openBoards;
+$('#randBtn').onclick = () => applyBoard(D.boards[Math.floor(Math.random()*D.boards.length)].id);
+$('#themeBtn').onclick = toggleTheme;
+$('#muteBtn').onclick = toggleMute;
+$('#fsBtn').onclick = toggleFs;
+$('#setBtn').onclick = renderSettings;
+$('#dayMinus').onclick = () => { S.day = Math.max(1, S.day-1); save(); renderSpeaker(); };
+$('#dayPlus').onclick = () => { S.day += 1; save(); renderSpeaker(); };
+$('#partBtn').onclick = () => { S.part = S.part === '白天' ? '夜晚' : '白天'; save(); renderSpeaker(); };
+$$('[data-close]').forEach(b => b.onclick = closeModals);
+$$('.modal').forEach(m => m.onclick = e => { if(e.target === m) closeModals(); });
+$('#boardSearch').oninput = e => { boardFilter.q = e.target.value; renderBoardList(); };
+$('#seatFilter').onclick = e => {
+  const b = e.target.closest('[data-seats]'); if(!b) return;
+  boardFilter.seats = Number(b.dataset.seats); renderFilters(); renderBoardList();
+};
+$('#boardList').onclick = e => {
+  const b = e.target.closest('[data-board]'); if(!b) return;
+  applyBoard(Number(b.dataset.board)); closeModals();
+};
+$('#settingsBody').onchange = e => {
+  const t = e.target;
+  if(t.dataset.durStage){ S.durations[t.dataset.durStage] = Math.max(5, Math.min(3600, Number(t.value)||120)); save();
+    if(t.dataset.durStage === S.stage) setDuration(S.durations[S.stage]); }
+};
+$('#settingsBody').onclick = e => {
+  const b = e.target.closest('[data-switch]');
+  if(b){ const k = b.dataset.switch; S[k] = !S[k]; save(); renderSettings(); renderTheme(); return; }
+  if(e.target.closest('#clearInline')) clearGame();
+};
+$('#clearBtn').onclick = clearGame;
+$('#seatGrid').onclick = e => {
+  const dot = e.target.closest('[data-dot]');
+  if(dot){ const n = Number(dot.dataset.dot); S.alive[n] = !isAlive(n); save(); renderSeats(); return; }
+  const seat = e.target.closest('.seat');
+  if(seat && !e.target.closest('input')) selectSeat(Number(seat.dataset.seat));
+};
+$('#seatGrid').oninput = e => {
+  const t = e.target.closest('[data-name]');
+  if(t){ S.names[t.dataset.name] = t.value; save(); renderSpeaker(); }
+};
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ closeModals(); return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if(tag === 'input' || tag === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if(e.code === 'Space'){ e.preventDefault(); toggle(); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); nextSeat(1); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); nextSeat(-1); }
+  else if(k === 'r'){ reset(); }
+  else if(k === 'f'){ toggleFs(); }
+  else if(k === 'm'){ toggleMute(); }
+  else if(e.key === '+' || e.key === '='){ addTime(10); }
+  else if(e.key === '-' || e.key === '_'){ addTime(-10); }
+  else if(/^[1-9]$/.test(e.key)){ selectSeat(Number(e.key)); }
+});
+document.addEventListener('visibilitychange', () => { if(!document.hidden && running) tick(); });
+window.addEventListener('beforeunload', save);
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* ---------------- 自测 ---------------- */
+window.__T = {
+  S: () => S, D, remaining: () => remaining, running: () => running,
+  start, pause, toggle, reset, addTime, tick, selectSeat, nextSeat, setStage, setDuration,
+  applyBoard, renderAll, openBoards, closeModals, toggleTheme, toggleMute, save,
+  setAlive: (n, v) => { S.alive[n] = v; save(); renderSeats(); },
+  forceTick: ms => { if(running){ endAt -= ms; tick(); } },
+  board, duration,
+};
+function selfTest(){
+  const R = [], ck = (c, n) => R.push((c ? 'OK   ' : 'FAIL ') + n);
+  const T = window.__T, snap = JSON.stringify(S);
+  try{
+    ck(D.boards.length === 77 && D.rules === 421, '内嵌数据 77 板 / 421 规则');
+    ck(D.boards.some(b => b.name === '12人阴阳师') && D.boards.some(b => b.name === '12人火力全开'), '第二批新板已内嵌');
+    ck($$('[src],[href]').every(e => !/^https?:/i.test(e.getAttribute('src') || e.getAttribute('href') || '')), '无任何外链资源');
+    ck($$('script[src],link[rel=stylesheet]').length === 0, '无外部脚本 / 样式，单文件可独立打开');
+    ck(performance.getEntriesByType('resource').every(r => !/^https?:/i.test(r.name)), '运行时未发起任何网络请求');
+    ck($$('.stagebar button').length === 6, '六个发言阶段');
+    const b10 = D.boards.find(b => b.seats === 10), b12 = D.boards.find(b => b.seats === 12);
+    T.applyBoard(b10.id); ck($$('.seat').length === 10, '选 10 人板重建 10 个座位');
+    T.applyBoard(b12.id); ck($$('.seat').length === 12, '选 12 人板重建 12 个座位');
+    T.setStage('pk'); ck(T.remaining() === T.duration() && T.duration() === 60, 'PK 阶段时长 60 秒');
+    T.setStage('jingxia');
+    T.reset(); ck(T.remaining() === T.duration(), '重置回到阶段时长');
+    T.addTime(10); ck(T.remaining() === T.duration() + 10, '＋10 秒生效');
+    T.addTime(-10); ck(T.remaining() === T.duration(), '−10 秒生效');
+    T.start(); ck(T.running(), '开始计时');
+    T.forceTick(3000); ck(T.remaining() <= T.duration() - 2.9, '计时递减');
+    T.pause(); ck(!T.running(), '暂停停止计时');
+    const left = T.remaining(); T.forceTick(5000); ck(T.remaining() === left, '暂停后时间不再变化');
+    T.reset(); T.start(); T.forceTick(T.duration() * 1000 + 500);
+    ck(!T.running() && T.remaining() === 0, '到时自动停止并归零');
+    T.selectSeat(1); T.setAlive(2, false); T.nextSeat(1); ck(T.S().seat === 3, '下一位自动跳过出局者');
+    T.setAlive(2, true); T.nextSeat(-1); ck(T.S().seat === 2, '上一位生效');
+    T.openBoards(); ck(!$('#boardModal').classList.contains('hidden'), '版型选择弹层可打开');
+    const si = $('#boardSearch'); si.value = '阴阳师'; si.dispatchEvent(new Event('input'));
+    ck($$('#boardList .bitem').length >= 1 && $$('#boardList .bitem').length < 10, '版型搜索命中');
+    si.value = ''; si.dispatchEvent(new Event('input')); T.closeModals();
+    const th = document.documentElement.dataset.theme; T.toggleTheme();
+    ck(document.documentElement.dataset.theme !== th, '明暗主题切换'); T.toggleTheme();
+    ck(localStorage.getItem(LS) !== null, '设置持久化到 localStorage');
+    ck($('#tipList').children.length > 0, '法官提醒已渲染');
+    ck($('#boardInfoBody').textContent.includes('好人'), '版型身份构成已渲染');
+    const vw = window.innerWidth;
+    const over = [...document.querySelectorAll('body *')].filter(e => {
+      const r = e.getBoundingClientRect();
+      if(r.width <= 0 || r.right <= vw + 1) return false;
+      // 横向滚动容器内的子项本就可以滑出可视区，不算页面溢出
+      let p = e.parentElement;
+      while(p && p !== document.body){
+        if(/(auto|scroll)/.test(getComputedStyle(p).overflowX)) return false;
+        p = p.parentElement;
+      }
+      return true;
+    }).slice(0, 5).map(e => e.tagName + '.' + String(e.className || '').slice(0, 16));
+    ck(!over.length, '视口 ' + vw + 'px 内无横向越界' + (over.length ? ' → ' + over.join(' | ') : ''));
+    ck(document.documentElement.scrollWidth <= vw + 1, '文档无横向滚动');
+  }catch(e){ R.push('FAIL 自测异常：' + e.message); }
+  Object.assign(S, JSON.parse(snap)); remaining = T.duration(); running = false; timedOut = false;
+  renderAll();
+  const el = $('#selftestResult'); el.hidden = false; el.textContent = R.join('\n');
+}
+if(new URLSearchParams(location.search).has('selftest')) setTimeout(selfTest, 80);
+
+renderAll();
+})();
+</script>
+</body>
+</html>
