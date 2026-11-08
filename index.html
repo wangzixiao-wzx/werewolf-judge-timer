@@ -1102,7 +1102,12 @@ function selfTest(){
     ck(D.boards.some(b => b.name === '12人阴阳师') && D.boards.some(b => b.name === '12人火力全开'), '第二批新板已内嵌');
     ck($$('[src],[href]').every(e => !/^https?:/i.test(e.getAttribute('src') || e.getAttribute('href') || '')), '无任何外链资源');
     ck($$('script[src],link[rel=stylesheet]').length === 0, '无外部脚本 / 样式，单文件可独立打开');
-    ck(performance.getEntriesByType('resource').every(r => !/^https?:/i.test(r.name)), '运行时未发起任何网络请求');
+    // 本地 file:// 必须零网络请求；线上允许同源 manifest / icon / sw，但禁止任何跨域或外部资源
+    const netBad = performance.getEntriesByType('resource').filter(r =>
+      /^https?:/i.test(r.name) &&
+      (location.protocol === 'file:' || new URL(r.name, location.href).origin !== location.origin));
+    ck(!netBad.length, '离线无网络请求 / 线上无跨域请求' +
+      (netBad.length ? ' → ' + netBad.slice(0, 2).map(r => r.name).join(' | ') : ''));
     ck($$('.stagebar button').length === 6, '六个发言阶段');
     const b10 = D.boards.find(b => b.seats === 10), b12 = D.boards.find(b => b.seats === 12);
     T.applyBoard(b10.id); ck($$('.seat').length === 10, '选 10 人板重建 10 个座位');
