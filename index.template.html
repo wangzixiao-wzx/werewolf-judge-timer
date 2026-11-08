@@ -156,6 +156,61 @@ html[data-theme="light"] .controls .primary{color:#fff}
 .seat .spoken{position:absolute;top:3px;right:5px;font-size:10px;color:var(--good)}
 .seathint{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.6}
 
+/* ---------- 状态标记 ---------- */
+.smarks{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-items:center;
+  margin-top:5px;min-height:18px;cursor:pointer;min-width:0}
+.mk{font-size:10px;line-height:1.6;padding:0 5px;border-radius:5px;border:1px solid var(--line);
+  background:var(--panel);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk.mg0{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.mk.mg1{color:var(--god);border-color:color-mix(in srgb,var(--god) 50%,var(--line))}
+.mk.mg2{color:var(--third);border-color:color-mix(in srgb,var(--third) 50%,var(--line))}
+.mk.mg3{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--line))}
+.mk.mg4{color:var(--change);border-color:color-mix(in srgb,var(--change) 50%,var(--line))}
+.mk.more{color:var(--muted)}
+.mkadd{font-size:10px;padding:0 6px;border:1px dashed var(--line);border-radius:5px;
+  color:var(--muted);line-height:1.6;flex:none}
+.mkadd:hover{border-color:var(--accent);color:var(--accent)}
+.mgroup{margin-top:13px}
+.mgroup .gt{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.tagbtns{display:flex;flex-wrap:wrap;gap:6px}
+.tagbtn{padding:5px 10px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel2);font-size:12px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.tagbtn:hover{border-color:var(--accent);color:var(--text)}
+.tagbtn.on{background:var(--accent);border-color:var(--accent);color:#1b1400;font-weight:700}
+html[data-theme="light"] .tagbtn.on{color:#fff}
+.curmarks{display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center}
+.curmarks .cm{display:inline-flex;align-items:center;gap:6px;padding:3px 7px 3px 9px;
+  border-radius:999px;border:1px solid var(--accent);color:var(--accent);font-size:12px}
+.curmarks .cm b{cursor:pointer;font-weight:700;padding:0 2px;line-height:1}
+.noterow{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.noterow input{flex:1 1 140px;min-width:0;padding:8px 10px;border:1px solid var(--line);
+  border-radius:9px;background:var(--panel2);font-size:13px}
+.subhist{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.subhist h4{margin:0 0 8px;font-size:12px;color:var(--muted);font-weight:600}
+.minihist{display:grid;gap:5px;max-height:150px;overflow:auto}
+.minihist .mh{font-size:11.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap}
+.minihist .mh b{color:var(--text);font-weight:600}
+
+/* ---------- 历史时间线 ---------- */
+.hlist{display:grid;gap:7px}
+.hitem{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:8px 10px}
+.hitem .hmeta{font-size:10.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;
+  align-items:center;padding-right:48px}
+.hitem .hno{font-family:ui-monospace,monospace;color:var(--accent)}
+.hitem .hmain{font-size:13px;margin-top:3px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hitem .hkind{font-size:10px;padding:1px 6px;border-radius:5px;border:1px solid var(--line);color:var(--muted)}
+.hitem .hkind.add{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--line))}
+.hitem .hkind.del{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
+.hitem .hkind.alive{color:var(--wolf);border-color:color-mix(in srgb,var(--wolf) 50%,var(--line))}
+.hitem .hlabel{font-weight:600;color:var(--accent);word-break:break-all}
+.hitem .hnote{font-size:11.5px;color:var(--muted);margin-top:3px;word-break:break-all}
+.hitem .hundo{position:absolute;right:8px;top:7px;font-size:11px;color:var(--muted);
+  border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.hitem .hundo:hover{color:var(--accent);border-color:var(--accent)}
+#histCopyFallback{width:100%;min-height:120px;margin-bottom:10px;padding:8px;
+  border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:11.5px}
+.sheet .sfoot{flex-wrap:wrap}
+
 .tiplist{margin:0;padding:0;list-style:none;max-height:230px;overflow:auto}
 .tiplist li{font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line);line-height:1.6}
 .tiplist li:last-child{border-bottom:0}
@@ -244,6 +299,7 @@ kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--lin
     <button id="partBtn" title="切换白天/夜晚">☾</button>
   </div>
   <div class="tools">
+    <button class="tool" id="histBtn" title="状态历史（H）">🕘</button>
     <button class="tool" id="randBtn" title="随机抽板">🎲</button>
     <button class="tool" id="themeBtn" title="切换明暗">🌗</button>
     <button class="tool" id="muteBtn" title="声音开关">🔊</button>
@@ -286,12 +342,12 @@ kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--lin
   <aside class="sidepane">
     <section class="card" id="boardInfo"><h3>📋 当前版型<span class="tag" id="boardTag"></span></h3><div class="body" id="boardInfoBody"></div></section>
     <section class="card" id="seatsCard"><h3>🪑 座位表<span class="tag" id="seatsTag"></span></h3><div class="body"><div class="seatgrid" id="seatGrid"></div>
-      <div class="seathint">点座位＝切换发言人；点左上角绿点＝标记出局 / 复活（「下一位」自动跳过出局者）；名字可直接输入，自动存在本机。</div></div></section>
+      <div class="seathint">点座位＝切换发言人；点绿点＝出局 / 复活；点 <b>＋ 标记</b>＝给该玩家打状态标签（警长、金水、抗推…）并自动记入历史。名字可直接输入，全部存在本机。</div></div></section>
     <section class="card" id="tipsCard"><h3>⚖️ 法官提醒<span class="tag" id="tipsTag"></span></h3><div class="body"><ul class="tiplist" id="tipList"></ul></div></section>
   </aside>
 </main>
 <footer>
-  快捷键：<kbd>空格</kbd> 开始/暂停 · <kbd>←</kbd><kbd>→</kbd> 切人 · <kbd>R</kbd> 重置 · <kbd>+</kbd><kbd>−</kbd> 加减 10 秒 · <kbd>F</kbd> 全屏 · <kbd>M</kbd> 静音<br>
+  快捷键：<kbd>空格</kbd> 开始/暂停 · <kbd>←</kbd><kbd>→</kbd> 切人 · <kbd>R</kbd> 重置 · <kbd>+</kbd><kbd>−</kbd> 加减 10 秒 · <kbd>T</kbd> 标记当前玩家 · <kbd>H</kbd> 状态历史 · <kbd>F</kbd> 全屏 · <kbd>M</kbd> 静音<br>
   数据内嵌、无后端、无联网请求；<b>单独保存本页 index.html 即可离线使用</b>。版型数据来自本地 <code>werewolf.db</code> 版型配置，规则以主持人口径为准 · <span id="genText"></span>
 </footer>
 </div>
@@ -310,6 +366,33 @@ kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--lin
   <header><b>设置</b><button class="x" data-close>✕</button></header>
   <div class="sbody" id="settingsBody"></div>
   <div class="sfoot"><button class="btn danger" id="clearBtn">清空本局记录</button><button class="btn primary" data-close>完成</button></div>
+</div></div>
+
+<div class="modal hidden" id="markModal"><div class="sheet">
+  <header><b>🏷 状态标记</b><span style="color:var(--muted);font-size:12px" id="markSeatTitle"></span><button class="x" data-close>✕</button></header>
+  <div class="sbody" id="markBody"></div>
+  <div class="sfoot">
+    <button class="btn danger" id="markClear">清空该玩家标记</button>
+    <button class="btn" id="markAllHist">查看全部历史</button>
+    <button class="btn primary" data-close>完成</button>
+  </div>
+</div></div>
+
+<div class="modal hidden" id="historyModal"><div class="sheet">
+  <header><b>🕘 状态历史</b><span style="color:var(--muted);font-size:12px" id="histCount"></span><button class="x" data-close>✕</button></header>
+  <div class="sbody">
+    <div class="searchrow"><input id="histSearch" placeholder="筛选座位号 / 玩家名 / 标签 / 备注"></div>
+    <div class="filter" id="histFilter"></div>
+    <textarea id="histCopyFallback" class="hidden" readonly></textarea>
+    <div class="hlist" id="histList"></div>
+  </div>
+  <div class="sfoot">
+    <button class="btn" id="histNew">新开一局</button>
+    <button class="btn" id="histCopy">复制文本</button>
+    <button class="btn" id="histExport">导出 CSV</button>
+    <button class="btn danger" id="histClear">清空历史</button>
+    <button class="btn primary" data-close>完成</button>
+  </div>
 </div></div>
 
 <pre id="selftestResult" hidden></pre>
@@ -335,10 +418,22 @@ const STAGES = [
 const TIP_RE = /发言|警徽|警长|退水|遗言|自爆|吞警|屠边|屠城|投票|放逐|秒|分钟|顺序|竞选|PK|白天|夜晚|平安夜|技能失效|守护|查验/;
 const RING = 2 * Math.PI * 100;
 
+/* 预设状态标签：分组决定颜色，自定义标签单独一组 */
+const MARK_GROUPS = [
+  {n:'警徽 / 竞选', tags:['警长','上警','退水','警徽流失','双爆吞警','警上金水']},
+  {n:'信息 / 查验', tags:['金水','查杀','银水','悍跳','对跳','认神','认民','报信息']},
+  {n:'夜间 / 技能', tags:['首刀','被救','被毒','被守','被验','被梦','禁言','被连','自爆']},
+  {n:'局势 / 备注', tags:['抗推','焦点位','疑似狼','疑似好','归票','划水','站边','交牌','出局风险']},
+];
+const KIND_TXT = {'mark+':'＋标记','mark-':'－标记','markclear':'清空标记','alive':'生死',
+                  'phase':'流程','board':'换板','reset':'重置','undo':'撤销','note':'备注'};
+const HIST_MAX = 800;
+
 function defaults(){
   const durations = {}; STAGES.forEach(s => durations[s.k] = s.d);
   const first = D.boards.find(b => /预女猎白/.test(b.name)) || D.boards.find(b => b.seats === 12) || D.boards[0];
   return {boardId:first.id, stage:'jingxia', durations, seat:1, names:{}, alive:{}, spoken:{}, used:{},
+          marks:{}, history:[], customTags:[], hseq:0,
           day:1, part:'白天', theme:'dark', muted:false, vibrate:true, autoReset:true, recent:[]};
 }
 function load(){
@@ -347,7 +442,11 @@ function load(){
     const d = defaults();
     const s = Object.assign(d, raw);
     s.durations = Object.assign(d.durations, raw.durations || {});
-    ['names','alive','spoken','used'].forEach(k => s[k] = Object.assign({}, raw[k] || {}));
+    ['names','alive','spoken','used','marks'].forEach(k => s[k] = Object.assign({}, raw[k] || {}));
+    Object.keys(s.marks).forEach(n => { if(!Array.isArray(s.marks[n])) delete s.marks[n]; });
+    s.history = Array.isArray(raw.history) ? raw.history : [];
+    s.customTags = Array.isArray(raw.customTags) ? raw.customTags : [];
+    s.hseq = Math.max(Number(raw.hseq) || 0, ...s.history.map(h => Number(h.id) || 0), 0);
     if(!D.boards.some(b => b.id === s.boardId)) s.boardId = d.boardId;
     if(!STAGES.some(x => x.k === s.stage)) s.stage = 'jingxia';
     return s;
@@ -357,12 +456,128 @@ const S = load();
 let remaining = S.durations[S.stage];
 let running = false, endAt = 0, timedOut = false;
 let boardFilter = {q:'', seats:0};
+let histFilter = {k:'all', q:''};
+let markSeat = 1;
 let audioCtx = null;
 
 function save(){
   try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){}
 }
 function board(){ return D.boards.find(b => b.id === S.boardId) || D.boards[0]; }
+
+/* ---------------- 状态标记 & 历史时间线 ---------------- */
+function fmtClock(ts){
+  const d = new Date(Number(ts) || Date.now()), p = n => String(n).padStart(2, '0');
+  return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+function logEvent(kind, label, seat, note){
+  S.hseq = (Number(S.hseq) || 0) + 1;
+  S.history.push({
+    id:S.hseq, ts:Date.now(), day:S.day, part:S.part, stage:stage().n, board:board().name,
+    seat:seat || 0, name:seat ? seatName(seat) : '', kind:kind, label:label || '', note:note || ''
+  });
+  if(S.history.length > HIST_MAX) S.history.splice(0, S.history.length - HIST_MAX);
+  save();
+}
+function marksOf(n){ return Array.isArray(S.marks[n]) ? S.marks[n] : []; }
+function hasMark(n, tag){ return marksOf(n).indexOf(tag) >= 0; }
+function markClass(tag){
+  for(let i = 0; i < MARK_GROUPS.length; i++)
+    if(MARK_GROUPS[i].tags.indexOf(tag) >= 0) return 'mg' + i;
+  return 'mg4';
+}
+function setMarkRaw(n, tag, on){
+  const cur = marksOf(n).slice(), i = cur.indexOf(tag);
+  if(on && i < 0) cur.push(tag);
+  if(!on && i >= 0) cur.splice(i, 1);
+  if(cur.length) S.marks[n] = cur; else delete S.marks[n];
+}
+function refreshPanels(){ renderSeats(); renderHistory(); renderMarkModal(); }
+function toggleMark(n, tag, note){
+  tag = String(tag || '').trim().slice(0, 14);
+  if(!tag || n < 1 || n > board().seats) return false;
+  const on = !hasMark(n, tag);
+  setMarkRaw(n, tag, on);
+  logEvent(on ? 'mark+' : 'mark-', tag, n, note || '');
+  save(); refreshPanels();
+  return on;
+}
+function addCustomTag(n, text){
+  const t = String(text || '').trim().slice(0, 14);
+  if(!t) return false;
+  if(S.customTags.indexOf(t) < 0) S.customTags.push(t);
+  if(hasMark(n, t)) return false;
+  return toggleMark(n, t);
+}
+function clearMarks(n){
+  const old = marksOf(n).slice();
+  if(!old.length) return;
+  delete S.marks[n];
+  logEvent('markclear', '清空 ' + old.length + ' 个标记', n, old.join(' / '));
+  save(); refreshPanels();
+}
+function setAlive(n, v){
+  S.alive[n] = v;
+  logEvent('alive', v ? '复活' : '出局', n);
+  save(); renderSeats(); renderHistory();
+}
+function undoEvent(id){
+  const h = S.history.find(x => x.id === Number(id));
+  if(!h) return false;
+  if(h.kind === 'mark+' || h.kind === 'mark-') setMarkRaw(h.seat, h.label, h.kind === 'mark-');
+  else if(h.kind === 'alive') S.alive[h.seat] = (h.label === '出局');
+  else return false;                       // 流程 / 换板 / 重置 / 备注不可回滚
+  logEvent('undo', h.label, h.seat, '撤销 #' + h.id + ' ' + (KIND_TXT[h.kind] || h.kind));
+  save(); renderAll(); renderHistory(); renderMarkModal();
+  return true;
+}
+function clearHistory(){
+  S.history = []; S.hseq = 0;
+  save(); renderHistory(); renderMarkModal();
+}
+function historyRows(list){
+  return (list || S.history).map(h => [
+    fmtClock(h.ts), '第' + h.day + '天', h.part || '', h.stage || '',
+    h.seat ? (h.seat + ' 号' + (h.name ? ' · ' + h.name : '')) : '—',
+    KIND_TXT[h.kind] || h.kind, h.label || '', h.note || ''
+  ]);
+}
+function exportText(fmt, list){
+  const rows = historyRows(list);
+  if(fmt === 'csv'){
+    const head = ['时间','天数','昼夜','阶段','座位 / 玩家','动作','状态 / 标记','备注'];
+    return '\ufeff' + [head].concat(rows).map(r => r.map(v =>
+      '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  }
+  return ['法官状态历史 · ' + board().name + ' · 共 ' + rows.length + ' 条'].concat(
+    rows.map(r => r[0] + '  ' + r[1] + '·' + r[2] + '·' + r[3] + '  ' + r[4] +
+      '  ' + r[5] + ' ' + r[6] + (r[7] ? '（' + r[7] + '）' : ''))
+  ).join('\n');
+}
+function downloadHistory(){
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const name = '法官状态历史_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+               '_' + p(d.getHours()) + p(d.getMinutes()) + '.csv';
+  const url = URL.createObjectURL(new Blob([exportText('csv')], {type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function copyHistory(){
+  const t = exportText('txt');
+  let ok = false;
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove();
+  }catch(e){}
+  const fb = $('#histCopyFallback');
+  fb.classList.toggle('hidden', ok);
+  if(!ok){ fb.value = t; fb.focus(); fb.select(); }
+  $('#histCopy').textContent = ok ? '已复制 ✓' : '请手动复制 ↑';
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(() => {}, () => {});
+}
 function stage(){ return STAGES.find(s => s.k === S.stage) || STAGES[1]; }
 function duration(){ return Math.max(5, Number(S.durations[S.stage]) || 120); }
 function isAlive(n){ return S.alive[n] !== false; }
@@ -472,6 +687,7 @@ function setStage(k){
   usedAdd();
   S.stage = k; remaining = duration(); running = false; timedOut = false;
   S.spoken = {};
+  logEvent('phase', stage().n);
   save(); renderAll();
 }
 function setDuration(v){
@@ -486,7 +702,7 @@ function applyBoard(id, keep){
   const oldSeats = board().seats;
   S.boardId = id;
   if(!keep || b.seats !== oldSeats){
-    ['names','alive','spoken','used'].forEach(k => {
+    ['names','alive','spoken','used','marks'].forEach(k => {
       const o = {};
       Object.keys(S[k]).forEach(n => { if(Number(n) <= b.seats) o[n] = S[k][n]; });
       S[k] = o;
@@ -494,6 +710,7 @@ function applyBoard(id, keep){
   }
   S.seat = 1; remaining = duration(); running = false; timedOut = false;
   S.recent = [id].concat((S.recent || []).filter(x => x !== id)).slice(0, 5);
+  logEvent('board', b.name);
   save(); renderAll();
 }
 
@@ -542,15 +759,22 @@ function renderTips(){
 }
 function renderSeats(){
   const n = board().seats;
-  $('#seatsTag').textContent = n + ' 座 · ' + Object.keys(S.alive).filter(x => S.alive[x] === false).length + ' 人出局';
+  $('#seatsTag').textContent = n + ' 座 · ' +
+    Object.keys(S.alive).filter(x => S.alive[x] === false).length + ' 人出局 · ' +
+    Object.keys(S.marks).filter(x => marksOf(x).length).length + ' 人有标记';
   $('#seatGrid').innerHTML = Array.from({length:n}, (_,i) => {
-    const k = i + 1, nm = seatName(k), used = Number(S.used[k]) || 0;
+    const k = i + 1, nm = seatName(k), used = Number(S.used[k]) || 0, ms = marksOf(k);
+    const chips = ms.slice(0, 2).map(t =>
+      '<span class="mk '+markClass(t)+'">'+escapeHtml(t)+'</span>').join('') +
+      (ms.length > 2 ? '<span class="mk more">+'+ (ms.length - 2) +'</span>' : '');
     return '<div class="seat" data-seat="'+k+'">' +
       '<button class="dot" data-dot="'+k+'" title="标记出局 / 复活"></button>' +
       (S.spoken[k] ? '<span class="spoken">✓</span>' : '') +
       '<div class="sno">'+k+' 号</div>' +
       '<input class="sname" data-name="'+k+'" value="'+escapeAttr(nm)+'" placeholder="玩家名" maxlength="12">' +
-      '<div class="sused">'+(used ? '累计 '+fmtUsed(used) : '—')+'</div></div>';
+      '<div class="sused">'+(used ? '累计 '+fmtUsed(used) : '—')+'</div>' +
+      '<div class="smarks" data-mark="'+k+'" title="点击标记该玩家状态 / 查看历史">'+ chips +
+        '<button class="mkadd" data-mark="'+k+'">＋</button></div></div>';
   }).join('');
   renderSeatState();
 }
@@ -572,10 +796,106 @@ function renderTheme(){
 function renderAll(){
   renderStageBar(); renderBoardInfo(); renderTips(); renderSeats();
   renderSpeaker(); renderTheme(); renderTime();
+  renderHistory(); renderMarkModal();
   $('#durInput').value = duration();
 }
 function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s){ return escapeHtml(s); }
+
+/* ---------------- 标记面板 / 历史面板 ---------------- */
+function openMark(n){
+  n = Number(n) || S.seat;
+  if(n < 1 || n > board().seats) return;
+  markSeat = n;
+  $('#markModal').classList.remove('hidden');
+  renderMarkModal();
+}
+function renderMarkModal(){
+  if($('#markModal').classList.contains('hidden')) return;
+  const n = markSeat, nm = seatName(n), ms = marksOf(n);
+  $('#markSeatTitle').textContent = n + ' 号' + (nm ? ' · ' + nm : '') +
+    ' ｜ 第 ' + S.day + ' 天 · ' + S.part + ' · ' + stage().n;
+  const keepNote = $('#markNote') ? $('#markNote').value : '';
+  const keepCustom = $('#markCustom') ? $('#markCustom').value : '';
+  const tagbtn = t => '<button class="tagbtn ' + (hasMark(n, t) ? 'on' : '') +
+    '" data-tag="' + escapeAttr(t) + '">' + escapeHtml(t) + '</button>';
+  const groups = MARK_GROUPS.map(g =>
+    '<div class="mgroup"><div class="gt">' + g.n + '</div><div class="tagbtns">' +
+    g.tags.map(tagbtn).join('') + '</div></div>').join('');
+  const custom = S.customTags.length
+    ? '<div class="mgroup"><div class="gt">自定义标签</div><div class="tagbtns">' +
+      S.customTags.map(tagbtn).join('') + '</div></div>' : '';
+  const own = S.history.filter(h => h.seat === n);
+  const recent = own.slice(-6).reverse();
+  $('#markBody').innerHTML =
+    '<div class="gt" style="font-size:11.5px;color:var(--muted)">当前状态（点 ✕ 移除，自动记入历史）</div>' +
+    '<div class="curmarks">' + (ms.length
+      ? ms.map((t, i) => '<span class="cm">' + escapeHtml(t) +
+          '<b data-unmark="' + i + '" title="移除">✕</b></span>').join('')
+      : '<span class="empty">暂无标记，从下面选一个或自定义。</span>') + '</div>' +
+    groups + custom +
+    '<div class="noterow"><input id="markCustom" maxlength="14" placeholder="自定义标签，例如 首夜刀口" value="' + escapeAttr(keepCustom) + '">' +
+      '<button class="btn" id="markAddCustom">添加</button></div>' +
+    '<div class="noterow"><input id="markNote" maxlength="60" placeholder="记一笔现场备注（写入历史时间线）" value="' + escapeAttr(keepNote) + '">' +
+      '<button class="btn" id="markAddNote">记一笔</button></div>' +
+    '<div class="subhist"><h4>该玩家状态历史（' + own.length + ' 条）</h4><div class="minihist">' +
+      (recent.length ? recent.map(h =>
+        '<div class="mh"><span>' + fmtClock(h.ts) + '</span><span>第' + h.day + '天' + escapeHtml(h.part) + '</span>' +
+        '<b>' + escapeHtml(KIND_TXT[h.kind] || h.kind) + ' ' + escapeHtml(h.label) + '</b></div>').join('')
+        : '<div class="empty">暂无历史，打第一个标记后自动生成。</div>') +
+      '</div></div>';
+}
+function openHistory(){
+  histFilter = {k:'all', q:''};
+  $('#histSearch').value = '';
+  $('#histCopyFallback').classList.add('hidden');
+  $('#histCopy').textContent = '复制文本';
+  $('#historyModal').classList.remove('hidden');
+  renderHistory();
+}
+function renderHistory(){
+  if($('#historyModal').classList.contains('hidden')) return;
+  const q = histFilter.q.trim().toLowerCase();
+  let list = S.history.slice();
+  if(histFilter.k === 'mark') list = list.filter(h => /^mark/.test(h.kind));
+  else if(histFilter.k === 'alive') list = list.filter(h => h.kind === 'alive');
+  else if(histFilter.k === 'flow') list = list.filter(h => ['phase','board','reset','undo','note'].indexOf(h.kind) >= 0);
+  else if(histFilter.k === 'seat') list = list.filter(h => h.seat === S.seat);
+  if(q) list = list.filter(h => ((h.seat ? h.seat + '号 ' : '') + (h.name || '') + ' ' +
+    (h.label || '') + ' ' + (h.note || '') + ' ' + (h.stage || '') + ' ' + (h.board || ''))
+    .toLowerCase().indexOf(q) >= 0);
+  const shown = list.slice().reverse().slice(0, 200);
+  $('#histCount').textContent = '共 ' + S.history.length + ' 条 · 显示 ' + shown.length + ' 条';
+  const kinds = [['all','全部'],['mark','标记'],['alive','出局 / 复活'],['flow','流程 / 备注'],['seat','仅 ' + S.seat + ' 号']];
+  $('#histFilter').innerHTML = kinds.map(x =>
+    '<button data-hf="' + x[0] + '" class="' + (histFilter.k === x[0] ? 'on' : '') + '">' +
+    escapeHtml(x[1]) + '</button>').join('');
+  $('#histList').innerHTML = shown.length ? shown.map(h => {
+    const cls = h.kind === 'mark+' ? 'add' :
+      (h.kind === 'mark-' || h.kind === 'markclear' ? 'del' : (h.kind === 'alive' ? 'alive' : ''));
+    const canUndo = h.kind === 'mark+' || h.kind === 'mark-' || h.kind === 'alive';
+    return '<div class="hitem">' +
+      '<div class="hmeta"><span class="hno">#' + h.id + '</span><span>' + fmtClock(h.ts) + '</span>' +
+        '<span>第' + h.day + '天 · ' + escapeHtml(h.part) + ' · ' + escapeHtml(h.stage) + '</span>' +
+        '<span>' + escapeHtml(h.board) + '</span></div>' +
+      '<div class="hmain"><b>' + (h.seat ? h.seat + ' 号' + (h.name ? ' · ' + escapeHtml(h.name) : '') : '全局') + '</b>' +
+        '<span class="hkind ' + cls + '">' + escapeHtml(KIND_TXT[h.kind] || h.kind) + '</span>' +
+        '<span class="hlabel">' + escapeHtml(h.label) + '</span></div>' +
+      (h.note ? '<div class="hnote">' + escapeHtml(h.note) + '</div>' : '') +
+      (canUndo ? '<button class="hundo" data-undo="' + h.id + '">撤销</button>' : '') + '</div>';
+  }).join('') : '<div class="empty">暂无符合条件的历史。给座位打标记、点绿点标出局、切换天数 / 阶段都会自动留痕。</div>';
+}
+function startNewGame(){
+  ['names','alive','spoken','used','marks'].forEach(k => S[k] = {});
+  S.history = []; S.hseq = 0; S.day = 1; S.part = '白天'; S.seat = 1;
+  reset(); logEvent('reset', '新开一局');
+  histFilter = {k:'all', q:''}; $('#histSearch').value = '';
+  save(); renderAll(); renderHistory(); renderMarkModal();
+}
+function recordPhase(){
+  logEvent('phase', '第 ' + S.day + ' 天 · ' + S.part);
+  save(); renderSpeaker(); renderHistory(); renderMarkModal();
+}
 
 /* ---------------- 版型选择 ---------------- */
 function renderFilters(){
@@ -627,9 +947,10 @@ function renderSettings(){
   $('#settingsModal').classList.remove('hidden');
 }
 function clearGame(){
-  if(!confirm('清空本局的座位名字、出局标记和累计用时？（版型与时长设置保留）')) return;
-  S.names = {}; S.alive = {}; S.spoken = {}; S.used = {}; S.seat = 1; S.day = 1; S.part = '白天';
-  reset(); save(); renderAll();
+  if(!confirm('清空本局的座位名字、出局、状态标记和累计用时？\n（版型与时长设置保留；状态历史会留档，可在历史面板单独清空）')) return;
+  S.names = {}; S.alive = {}; S.spoken = {}; S.used = {}; S.marks = {};
+  S.seat = 1; S.day = 1; S.part = '白天';
+  reset(); logEvent('reset', '清空本局记录'); save(); renderAll(); renderHistory();
 }
 function toggleTheme(){ S.theme = S.theme === 'light' ? 'dark' : 'light'; save(); renderTheme(); }
 function toggleMute(){ S.muted = !S.muted; save(); renderTheme(); }
@@ -654,9 +975,10 @@ $('#themeBtn').onclick = toggleTheme;
 $('#muteBtn').onclick = toggleMute;
 $('#fsBtn').onclick = toggleFs;
 $('#setBtn').onclick = renderSettings;
-$('#dayMinus').onclick = () => { S.day = Math.max(1, S.day-1); save(); renderSpeaker(); };
-$('#dayPlus').onclick = () => { S.day += 1; save(); renderSpeaker(); };
-$('#partBtn').onclick = () => { S.part = S.part === '白天' ? '夜晚' : '白天'; save(); renderSpeaker(); };
+$('#histBtn').onclick = openHistory;
+$('#dayMinus').onclick = () => { S.day = Math.max(1, S.day-1); recordPhase(); };
+$('#dayPlus').onclick = () => { S.day += 1; recordPhase(); };
+$('#partBtn').onclick = () => { S.part = S.part === '白天' ? '夜晚' : '白天'; recordPhase(); };
 $$('[data-close]').forEach(b => b.onclick = closeModals);
 $$('.modal').forEach(m => m.onclick = e => { if(e.target === m) closeModals(); });
 $('#boardSearch').oninput = e => { boardFilter.q = e.target.value; renderBoardList(); };
@@ -679,9 +1001,58 @@ $('#settingsBody').onclick = e => {
   if(e.target.closest('#clearInline')) clearGame();
 };
 $('#clearBtn').onclick = clearGame;
+
+/* ---------------- 标记 / 历史 事件 ---------------- */
+function submitCustom(){
+  const inp = $('#markCustom'); if(!inp) return;
+  const v = inp.value.trim(); inp.value = '';
+  if(v) addCustomTag(markSeat, v);
+}
+function submitNote(){
+  const inp = $('#markNote'); if(!inp) return;
+  const v = inp.value.trim().slice(0, 60); inp.value = '';
+  if(v){ logEvent('note', v, markSeat); save(); renderHistory(); renderMarkModal(); }
+}
+$('#markBody').onclick = e => {
+  const t = e.target.closest('[data-tag]');
+  if(t){ toggleMark(markSeat, t.dataset.tag); return; }
+  const u = e.target.closest('[data-unmark]');
+  if(u){
+    const ms = marksOf(markSeat), i = Number(u.dataset.unmark);
+    if(ms[i]) toggleMark(markSeat, ms[i]);
+    return;
+  }
+  if(e.target.closest('#markAddCustom')){ submitCustom(); return; }
+  if(e.target.closest('#markAddNote')){ submitNote(); }
+};
+$('#markBody').onkeydown = e => {
+  if(e.key !== 'Enter') return;
+  if(e.target.id === 'markCustom'){ e.preventDefault(); submitCustom(); }
+  else if(e.target.id === 'markNote'){ e.preventDefault(); submitNote(); }
+};
+$('#markClear').onclick = () => clearMarks(markSeat);
+$('#markAllHist').onclick = () => { $('#markModal').classList.add('hidden'); openHistory(); };
+$('#histSearch').oninput = e => { histFilter.q = e.target.value; renderHistory(); };
+$('#histFilter').onclick = e => {
+  const b = e.target.closest('[data-hf]'); if(!b) return;
+  histFilter.k = b.dataset.hf; renderHistory();
+};
+$('#histList').onclick = e => {
+  const b = e.target.closest('[data-undo]'); if(!b) return;
+  undoEvent(b.dataset.undo);
+};
+$('#histCopy').onclick = copyHistory;
+$('#histExport').onclick = downloadHistory;
+$('#histClear').onclick = () => { if(confirm('清空全部状态历史？当前座位上的标记会保留。')) clearHistory(); };
+$('#histNew').onclick = () => {
+  if(confirm('新开一局：清空座位名、出局、标记与全部历史？建议先导出 CSV 留档。')) startNewGame();
+};
+
 $('#seatGrid').onclick = e => {
   const dot = e.target.closest('[data-dot]');
-  if(dot){ const n = Number(dot.dataset.dot); S.alive[n] = !isAlive(n); save(); renderSeats(); return; }
+  if(dot){ const n = Number(dot.dataset.dot); setAlive(n, !isAlive(n)); return; }
+  const mark = e.target.closest('[data-mark]');
+  if(mark){ openMark(mark.dataset.mark); return; }
   const seat = e.target.closest('.seat');
   if(seat && !e.target.closest('input')) selectSeat(Number(seat.dataset.seat));
 };
@@ -700,6 +1071,8 @@ document.addEventListener('keydown', e => {
   else if(k === 'r'){ reset(); }
   else if(k === 'f'){ toggleFs(); }
   else if(k === 'm'){ toggleMute(); }
+  else if(k === 'h'){ openHistory(); }
+  else if(k === 't'){ openMark(S.seat); }
   else if(e.key === '+' || e.key === '='){ addTime(10); }
   else if(e.key === '-' || e.key === '_'){ addTime(-10); }
   else if(/^[1-9]$/.test(e.key)){ selectSeat(Number(e.key)); }
@@ -712,12 +1085,14 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 
 /* ---------------- 自测 ---------------- */
 window.__T = {
-  S: () => S, D, remaining: () => remaining, running: () => running,
+  S: () => S, D, MARK_GROUPS, remaining: () => remaining, running: () => running,
   start, pause, toggle, reset, addTime, tick, selectSeat, nextSeat, setStage, setDuration,
   applyBoard, renderAll, openBoards, closeModals, toggleTheme, toggleMute, save,
-  setAlive: (n, v) => { S.alive[n] = v; save(); renderSeats(); },
-  forceTick: ms => { if(running){ endAt -= ms; tick(); } },
+  setAlive, forceTick: ms => { if(running){ endAt -= ms; tick(); } },
   board, duration,
+  toggleMark, addCustomTag, clearMarks, marksOf, hasMark, undoEvent, clearHistory,
+  startNewGame, openMark, openHistory, renderHistory, renderMarkModal,
+  exportText, logEvent, lastHistory: () => S.history[S.history.length - 1],
 };
 function selfTest(){
   const R = [], ck = (c, n) => R.push((c ? 'OK   ' : 'FAIL ') + n);
@@ -754,6 +1129,55 @@ function selfTest(){
     ck(localStorage.getItem(LS) !== null, '设置持久化到 localStorage');
     ck($('#tipList').children.length > 0, '法官提醒已渲染');
     ck($('#boardInfoBody').textContent.includes('好人'), '版型身份构成已渲染');
+
+    /* 状态标记与历史时间线 */
+    T.toggleMark(1, '警长');
+    ck(T.hasMark(1, '警长'), '添加状态标记');
+    ck($$('#seatGrid .seat[data-seat="1"] .mk').length >= 1, '座位卡显示标记徽章');
+    const hn0 = T.S().history.length;
+    T.toggleMark(1, '金水');
+    ck(T.hasMark(1, '金水') && T.marksOf(1).length === 2, '多标记共存');
+    ck(T.S().history.length === hn0 + 1, '标记自动生成一条历史');
+    const lh = T.lastHistory();
+    ck(lh.seat === 1 && lh.label === '金水' && lh.day === T.S().day &&
+       lh.part === T.S().part && lh.stage === '警下发言', '历史带天 / 昼夜 / 阶段 / 座位上下文');
+    T.toggleMark(1, '金水');
+    ck(!T.hasMark(1, '金水') && T.lastHistory().kind === 'mark-', '再次点击移除标记并留痕');
+    T.addCustomTag(1, '自定义A');
+    ck(T.hasMark(1, '自定义A') && T.S().customTags.indexOf('自定义A') >= 0, '自定义标签可添加并记住');
+    T.setAlive(3, false);
+    ck(T.lastHistory().kind === 'alive' && T.lastHistory().label === '出局', '出局自动记入历史');
+    T.undoEvent(T.lastHistory().id);
+    ck(T.S().alive[3] !== false, '撤销出局可回滚状态');
+    const hp = T.S().history.length;
+    T.setStage('pk');
+    ck(T.lastHistory().kind === 'phase' && T.S().history.length === hp + 1, '切换阶段自动记流程事件');
+    T.openMark(1);
+    ck(!$('#markModal').classList.contains('hidden'), '标记面板可打开');
+    ck($('#markBody').textContent.includes('警长'), '标记面板显示当前标记');
+    $('#markNote').value = '3号昨夜被救'; $('#markAddNote').click();
+    ck(T.lastHistory().kind === 'note' && T.lastHistory().label === '3号昨夜被救', '面板备注写入历史');
+    $('#markCustom').value = '自定义B'; $('#markAddCustom').click();
+    ck(T.hasMark(1, '自定义B'), '面板自定义标签可用');
+    T.toggleMark(1, '抗推'); T.undoEvent(T.lastHistory().id);
+    ck(!T.hasMark(1, '抗推'), '撤销标记可回滚当前状态');
+    T.closeModals();
+    T.openHistory();
+    ck(!$('#historyModal').classList.contains('hidden'), '历史面板可打开');
+    ck($$('#histList .hitem').length > 0, '历史时间线已渲染');
+    const hs = $('#histSearch'); hs.value = '金水'; hs.dispatchEvent(new Event('input'));
+    ck($$('#histList .hitem').length > 0, '历史按关键词筛选');
+    hs.value = ''; hs.dispatchEvent(new Event('input'));
+    const txt = T.exportText('txt'), csv = T.exportText('csv');
+    ck(txt.includes('金水') && txt.includes('警长') && csv.includes('座位 / 玩家'), '导出文本 / CSV 含关键字段');
+    const saved = JSON.parse(localStorage.getItem(LS));
+    ck(saved.marks !== undefined && Array.isArray(saved.history), '标记与历史持久化到 localStorage');
+    T.closeModals();
+    const small = D.boards.find(b => b.seats === 6) || D.boards.find(b => b.seats < 10);
+    if(small){ T.toggleMark(11, '临时'); T.applyBoard(small.id); ck(!T.marksOf(11).length, '换小人数板裁剪越界标记'); }
+    T.clearHistory();
+    ck(T.S().history.length === 0 && T.S().hseq === 0, '清空历史生效');
+
     const vw = window.innerWidth;
     const over = [...document.querySelectorAll('body *')].filter(e => {
       const r = e.getBoundingClientRect();
@@ -769,8 +1193,9 @@ function selfTest(){
     ck(!over.length, '视口 ' + vw + 'px 内无横向越界' + (over.length ? ' → ' + over.join(' | ') : ''));
     ck(document.documentElement.scrollWidth <= vw + 1, '文档无横向滚动');
   }catch(e){ R.push('FAIL 自测异常：' + e.message); }
+  T.closeModals();
   Object.assign(S, JSON.parse(snap)); remaining = T.duration(); running = false; timedOut = false;
-  renderAll();
+  save(); renderAll();
   const el = $('#selftestResult'); el.hidden = false; el.textContent = R.join('\n');
 }
 if(new URLSearchParams(location.search).has('selftest')) setTimeout(selfTest, 80);

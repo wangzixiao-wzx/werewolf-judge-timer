@@ -1,10 +1,14 @@
 /* 法官计时器 · 离线缓存
    策略：network-first（在线时始终取最新，离线时回退缓存）。
    单文件 index.html 拷到本地 file:// 打开时不会注册 SW，功能不受影响。 */
-const CACHE = 'ww-judge-timer-v1';
+const CACHE = 'ww-judge-timer-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', e => e.waitUntil(
+  caches.keys()
+    .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(() => self.clients.claim())
+));
 
 self.addEventListener('fetch', e => {
   const req = e.request;
