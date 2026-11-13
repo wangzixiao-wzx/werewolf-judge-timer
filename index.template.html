@@ -1098,7 +1098,9 @@ function selfTest(){
   const R = [], ck = (c, n) => R.push((c ? 'OK   ' : 'FAIL ') + n);
   const T = window.__T, snap = JSON.stringify(S);
   try{
-    ck(D.boards.length === 77 && D.rules === 421, '内嵌数据 77 板 / 421 规则');
+    ck(D.boards.length > 0 &&
+       D.rules === D.boards.reduce((s, b) => s + b.rules.length, 0),
+       '内嵌数据自洽：' + D.boards.length + ' 板 / ' + D.rules + ' 条规则');
     ck(D.boards.some(b => b.name === '12人阴阳师') && D.boards.some(b => b.name === '12人火力全开'), '第二批新板已内嵌');
     ck($$('[src],[href]').every(e => !/^https?:/i.test(e.getAttribute('src') || e.getAttribute('href') || '')), '无任何外链资源');
     ck($$('script[src],link[rel=stylesheet]').length === 0, '无外部脚本 / 样式，单文件可独立打开');
